@@ -18,7 +18,7 @@ export function PublicNavbar() {
   return (
     <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm' : 'bg-transparent'}`}>
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tight text-slate-900 group">
+        <Link href="/" prefetch={false} className="flex items-center gap-2 font-bold text-xl tracking-tight text-slate-900 group">
           <div className="bg-primary-600 text-white p-1.5 rounded-lg group-hover:bg-primary-700 transition-colors">
             <BrainCircuit className="w-5 h-5" />
           </div>
@@ -27,14 +27,14 @@ export function PublicNavbar() {
         
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-          <Link href="#" className="hover:text-primary-600 transition-colors">Platform</Link>
-          <Link href="#" className="hover:text-primary-600 transition-colors">Security</Link>
-          <Link href="#" className="hover:text-primary-600 transition-colors">Architecture</Link>
+          <Link href="#platform" prefetch={false} className="hover:text-primary-600 transition-colors">Platform</Link>
+          <Link href="#security" prefetch={false} className="hover:text-primary-600 transition-colors">Security</Link>
+          <Link href="#architecture" prefetch={false} className="hover:text-primary-600 transition-colors">Architecture</Link>
         </nav>
         
         <div className="hidden md:flex items-center gap-4">
-          <Link href="/login"><Button variant="ghost" className="font-semibold">Login</Button></Link>
-          <Link href="/register"><Button className="font-semibold">Start Free Trial</Button></Link>
+          <Link href="/login" prefetch={false}><Button variant="ghost" className="font-semibold">Login</Button></Link>
+          <Link href="/register" prefetch={false}><Button className="font-semibold">Start Free Trial</Button></Link>
         </div>
 
         {/* Mobile Toggle */}
@@ -53,13 +53,13 @@ export function PublicNavbar() {
             className="md:hidden border-t bg-white px-4 py-6 shadow-xl"
           >
             <nav className="flex flex-col space-y-4 text-base font-medium text-slate-600 mb-6">
-              <Link href="#" onClick={() => setIsMobileMenuOpen(false)}>Platform</Link>
-              <Link href="#" onClick={() => setIsMobileMenuOpen(false)}>Security</Link>
-              <Link href="#" onClick={() => setIsMobileMenuOpen(false)}>Architecture</Link>
+              <Link href="#platform" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}>Platform</Link>
+              <Link href="#security" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}>Security</Link>
+              <Link href="#architecture" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}>Architecture</Link>
             </nav>
             <div className="flex flex-col gap-3">
-              <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}><Button variant="outline" className="w-full">Login</Button></Link>
-              <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}><Button className="w-full">Start Free Trial</Button></Link>
+              <Link href="/login" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}><Button variant="outline" className="w-full">Login</Button></Link>
+              <Link href="/register" prefetch={false} onClick={() => setIsMobileMenuOpen(false)}><Button className="w-full">Start Free Trial</Button></Link>
             </div>
           </motion.div>
         )}

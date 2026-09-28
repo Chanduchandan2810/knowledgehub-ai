@@ -37,16 +37,9 @@ export default function AdminPermissions() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-white">
-                    <Lock className="w-4 h-4 text-blue-600 mt-0.5" />
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900">KNOWLEDGE_MANAGER</h4>
-                      <p className="text-[11px] text-slate-500">Upload and configure document access.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-white">
                     <FileText className="w-4 h-4 text-emerald-600 mt-0.5" />
                     <div>
-                      <h4 className="text-xs font-bold text-slate-900">MEMBER</h4>
+                      <h4 className="text-xs font-bold text-slate-900">EMPLOYEE</h4>
                       <p className="text-[11px] text-slate-500">Read and chat with authorized docs.</p>
                     </div>
                   </div>

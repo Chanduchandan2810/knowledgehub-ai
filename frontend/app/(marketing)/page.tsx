@@ -42,8 +42,8 @@ export default function LandingPage() {
             Turn internal documents into a secure AI knowledge assistant with grounded answers, explicit citations, and enterprise-grade permissions.
           </motion.p>
           <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
-            <Link href="/register"><Button size="lg" className="w-full sm:w-auto group">Get Started <ChevronRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" /></Button></Link>
-            <Link href="/demo"><Button size="lg" variant="outline" className="w-full sm:w-auto bg-white/50 backdrop-blur-sm">View Platform Demo</Button></Link>
+            <Link href="/register" prefetch={false}><Button size="lg" className="w-full sm:w-auto group">Get Started <ChevronRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" /></Button></Link>
+            <Link href="/demo" prefetch={false}><Button size="lg" variant="outline" className="w-full sm:w-auto bg-white/50 backdrop-blur-sm">View Platform Demo</Button></Link>
           </motion.div>
         </motion.div>
 
@@ -103,7 +103,7 @@ export default function LandingPage() {
       </section>
 
       {/* RAG Workflow Visualization */}
-      <section className="py-24 bg-navy-900 text-white relative overflow-hidden">
+      <section id="architecture" className="py-24 bg-navy-900 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
         <div className="container mx-auto px-4 max-w-6xl relative z-10">
           <div className="text-center mb-16">
@@ -134,10 +134,10 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="py-24 bg-slate-50 px-4">
+      <section id="platform" className="py-24 bg-slate-50 px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-slate-900">Platform Capabilities</h2>
+            <h2 id="security" className="text-3xl font-bold text-slate-900">Platform Capabilities</h2>
             <p className="mt-4 text-slate-600 max-w-2xl mx-auto">Built from the ground up for security, scale, and accuracy.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">

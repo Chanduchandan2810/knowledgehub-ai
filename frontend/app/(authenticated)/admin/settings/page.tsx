@@ -4,11 +4,48 @@ import { PageTransition } from '@/components/shared/page-transition'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Building2, Globe, Shield, CreditCard, Bell } from 'lucide-react'
-import { useState } from 'react'
+import { Building2, Globe, Shield, CreditCard, Bell, KeyRound } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
+import Link from 'next/link'
 
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState('org')
+  const [org, setOrg] = useState<any>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function loadOrg() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      // Read org ID from cookie
+      const match = document.cookie.match(new RegExp('(^| )khub_org_id=([^;]+)'))
+      const orgId = match ? match[2] : null
+
+      if (!orgId) return
+
+      try {
+        const res = await fetch('/api/v1/organizations/current', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'x-organization-id': orgId
+          }
+        })
+        if (res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+             throw new Error("Invalid content type from server.");
+          }
+          const orgData = await res.json()
+          setOrg(orgData)
+        }
+      } catch (err) {
+        console.error("Failed to load org", err)
+      }
+    }
+    loadOrg()
+  }, [supabase])
   
   return (
     <div className="flex flex-col h-full bg-slate-50/50">
@@ -47,23 +84,52 @@ export default function AdminSettings() {
                 <CardContent className="p-6 space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">Organization Name</label>
-                    <Input defaultValue="Acme Corporation" className="max-w-md" />
+                    <Input value={org?.name || ''} readOnly className="max-w-md bg-slate-50" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Workspace URL</label>
-                    <div className="flex items-center gap-2 max-w-md">
-                      <Input defaultValue="acme" className="flex-1" />
-                      <span className="text-slate-500 text-sm">.knowledgehub.ai</span>
-                    </div>
+                    <label className="text-sm font-medium text-slate-700">Organization ID (UUID)</label>
+                    <Input value={org?.id || ''} readOnly className="max-w-md bg-slate-50 font-mono text-xs" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Created At</label>
+                    <Input value={org?.created_at ? new Date(org.created_at).toLocaleDateString() : ''} readOnly className="max-w-md bg-slate-50" />
                   </div>
                   <div className="pt-4 border-t border-slate-100">
-                    <Button>Save Changes</Button>
+                    <Button disabled>Save Changes</Button>
+                    <p className="text-xs text-slate-400 mt-2">Editing organization details is restricted in this environment.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === 'security' && (
+              <Card className="shadow-sm border-slate-200">
+                <div className="p-6 border-b border-slate-100">
+                  <h2 className="text-lg font-semibold text-slate-900">Security & Access</h2>
+                  <p className="text-sm text-slate-500">Manage your personal security credentials.</p>
+                </div>
+                <CardContent className="p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-600">
+                        <KeyRound className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-900">Password</h3>
+                        <p className="text-xs text-slate-500">Change your administrative account password.</p>
+                      </div>
+                    </div>
+                    <Link href="/admin/change-password">
+                      <Button variant="outline" className="w-full sm:w-auto text-sm font-medium">
+                        Change Password
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
             )}
             
-            {activeTab !== 'org' && (
+            {activeTab !== 'org' && activeTab !== 'security' && (
               <Card className="shadow-sm border-slate-200">
                 <div className="p-12 text-center text-slate-500">
                   Settings panel for {activeTab} will be available in future releases.

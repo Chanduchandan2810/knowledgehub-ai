@@ -1,66 +1,82 @@
+﻿import uuid
 from typing import AsyncGenerator
 from fastapi import Depends, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
 from app.db.session import get_db
 from app.core.security import verify_token
-from app.models.user import User
-from app.models.membership import Membership
+from app.models.admin import Admin
+from app.models.employee import Employee
+from pydantic import BaseModel
 
-async def get_current_user(
+class UserContext(BaseModel):
+    auth_user_id: uuid.UUID
+    organization_id: uuid.UUID
+    role: str
+    email: str
+    full_name: str
+
+async def get_current_user_context(
     payload: dict = Depends(verify_token),
+    x_organization_id: uuid.UUID = Header(None, description="The ID of the organization to access"),
     db: AsyncSession = Depends(get_db)
-) -> User:
-    user_id = payload.get("sub")
-    if not user_id:
+) -> UserContext:
+    auth_user_id = payload.get("sub")
+    if not auth_user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
     
-    # Try to find user in our DB
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+    # Bypass RLS to find the user's role and organization
+    # First check Admin
+    admin_query = select(Admin).where(Admin.auth_user_id == auth_user_id)
+    if x_organization_id:
+        admin_query = admin_query.where(Admin.organization_id == x_organization_id)
     
-    if not user:
-        email = payload.get("email")
-        if not email:
-            raise HTTPException(status_code=401, detail="Email not found in token")
-        user = User(id=user_id, email=email)
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        
-    return user
-
-async def get_current_membership(
-    x_organization_id: str = Header(..., description="The ID of the organization to access"),
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-) -> Membership:
-    # Query membership as superuser (bypassing RLS) to verify access
-    result = await db.execute(
-        select(Membership)
-        .where(Membership.user_id == user.id)
-        .where(Membership.organization_id == x_organization_id)
-    )
-    membership = result.scalar_one_or_none()
+    result = await db.execute(admin_query)
+    admin = result.scalar_one_or_none()
     
-    if not membership:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this organization"
+    if admin:
+        ctx = UserContext(
+            auth_user_id=admin.auth_user_id,
+            organization_id=admin.organization_id,
+            role="ADMIN",
+            email=admin.email,
+            full_name=admin.full_name
         )
-    
-    # Now that access is verified, enforce RLS for all subsequent queries in this session
+    else:
+        # Check Employee
+        emp_query = select(Employee).where(Employee.auth_user_id == auth_user_id)
+        if x_organization_id:
+            emp_query = emp_query.where(Employee.organization_id == x_organization_id)
+            
+        result = await db.execute(emp_query)
+        emp = result.scalar_one_or_none()
+        
+        if emp:
+            ctx = UserContext(
+                auth_user_id=emp.auth_user_id,
+                organization_id=emp.organization_id,
+                role="EMPLOYEE",
+                email=emp.email,
+                full_name=emp.full_name
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to any organization"
+            )
+            
+    # Apply RLS context
     await db.execute(text(f"SET LOCAL role = 'authenticated';"))
-    await db.execute(text(f"SET LOCAL app.current_tenant = '{membership.organization_id}';"))
+    await db.execute(text(f"SET LOCAL app.current_tenant = '{ctx.organization_id}';"))
     
-    return membership
+    return ctx
 
 async def require_admin_role(
-    membership: Membership = Depends(get_current_membership)
-) -> Membership:
-    if membership.role != "ADMIN":
+    ctx: UserContext = Depends(get_current_user_context)
+) -> UserContext:
+    if ctx.role != "ADMIN":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin privileges required"
         )
-    return membership
+    return ctx

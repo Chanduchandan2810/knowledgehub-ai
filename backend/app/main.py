@@ -22,3 +22,23 @@ async def health_check():
     return {"status": "ok", "message": "KnowledgeHub AI API is running"}
 
 app.include_router(organizations.router, prefix="/api/v1/organizations", tags=["organizations"])
+
+from app.api.v1 import auth
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+
+from app.api.v1 import employees
+app.include_router(employees.router, prefix="/api/v1/employees", tags=["employees"])
+
+from fastapi.responses import JSONResponse
+import traceback
+import logging
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    logging.error(f"Global exception: {exc}")
+    traceback.print_exc()
+    # Return a safe, generic message to the client, but keep the real stacktrace in server logs
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An unexpected internal server error occurred."}
+    )

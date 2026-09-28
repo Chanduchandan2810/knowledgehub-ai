@@ -1,133 +1,149 @@
-"use client"
-import { AdminTopbar } from '@/components/navigation/admin-topbar'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileText, Users, Search, BrainCircuit, Activity, Settings, ArrowUpRight, Shield } from 'lucide-react'
-import { PageTransition } from '@/components/shared/page-transition'
-import { Button } from '@/components/ui/button'
+import { AdminTopbar } from "@/components/navigation/admin-topbar"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { 
+  FileText, 
+  Users, 
+  MessageSquare, 
+  Activity, 
+  Plus, 
+  ShieldCheck, 
+  Settings,
+  BrainCircuit,
+  Search,
+  ArrowRight
+} from "lucide-react"
+import Link from "next/link"
 
-export default function AdminDashboard() {
+export const metadata = {
+  title: "Dashboard - Admin Portal",
+}
+
+export default function AdminDashboardPage() {
   return (
-    <div className="flex flex-col h-full bg-slate-50/50">
-      <AdminTopbar title="Dashboard" description="Overview of your organization's knowledge base." />
-      <PageTransition className="flex-1 overflow-y-auto p-6 md:p-8">
-        <div className="max-w-[1600px] mx-auto space-y-8">
-          
-          {/* Welcome Section */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-            <div className="absolute right-0 top-0 w-64 h-full bg-gradient-to-l from-primary-50 to-transparent pointer-events-none"></div>
-            <div className="relative z-10">
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome to KnowledgeHub</h2>
-              <p className="text-sm text-slate-500 mt-1 max-w-xl leading-relaxed">
-                Your workspace is ready. You can now invite members and upload organizational knowledge to enable AI-powered secure retrieval.
-              </p>
-            </div>
-            <div className="flex gap-3 relative z-10 w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto shadow-sm">View Guide</Button>
-              <Button className="w-full sm:w-auto shadow-sm"><FileText className="w-4 h-4 mr-2" /> Add Knowledge</Button>
-            </div>
-          </div>
+    <div className="flex flex-col h-full bg-slate-50/50 relative">
+      <AdminTopbar title="Dashboard" description="Overview of your organization's AI knowledge hub." />
+      <div className="flex-1 flex flex-col overflow-auto p-6 md:p-8 custom-scrollbar">
+        <div className="max-w-6xl mx-auto space-y-8 w-full">
 
-          {/* Core Metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
-            <Card className="bg-white shadow-sm hover:shadow-md transition-all">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><FileText className="w-5 h-5" /></div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Indexed Docs</span>
-                </div>
-                <div className="text-3xl font-bold text-slate-900 mb-1">0</div>
-                <p className="text-xs text-slate-500 font-medium">Ready for retrieval</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-white shadow-sm hover:shadow-md transition-all">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center"><Users className="w-5 h-5" /></div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Users</span>
-                </div>
-                <div className="text-3xl font-bold text-slate-900 mb-1">1</div>
-                <p className="text-xs text-slate-500 font-medium">Organization members</p>
-              </CardContent>
-            </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
+            <FileText className="h-4 w-4 text-slate-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">12</div>
+            <p className="text-xs text-slate-500 mt-1">Processed and indexed</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Employees</CardTitle>
+            <Users className="h-4 w-4 text-slate-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">4</div>
+            <p className="text-xs text-slate-500 mt-1">Granted access</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Queries</CardTitle>
+            <MessageSquare className="h-4 w-4 text-slate-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">148</div>
+            <p className="text-xs text-slate-500 mt-1">+12% from last week</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm border-primary-200 bg-primary-50/30">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-primary-900">AI Status</CardTitle>
+            <BrainCircuit className="h-4 w-4 text-primary-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary-700">Online</div>
+            <p className="text-xs text-primary-600 mt-1">Retrieval system active</p>
+          </CardContent>
+        </Card>
+      </div>
 
-            <Card className="bg-white shadow-sm hover:shadow-md transition-all">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><Search className="w-5 h-5" /></div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Queries</span>
-                </div>
-                <div className="text-3xl font-bold text-slate-900 mb-1">0</div>
-                <p className="text-xs text-slate-500 font-medium">Last 30 days</p>
-              </CardContent>
-            </Card>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="shadow-sm col-span-1">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <p className="text-sm text-slate-500">Frequently used administrative tools</p>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <Link href="/admin/documents">
+              <Button variant="outline" className="w-full justify-start h-12 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-200 transition-colors">
+                <Plus className="mr-3 h-4 w-4" />
+                Add Knowledge Document
+              </Button>
+            </Link>
+            <Link href="/admin/employees">
+              <Button variant="outline" className="w-full justify-start h-12 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-200 transition-colors">
+                <Users className="mr-3 h-4 w-4" />
+                Add Team Members
+              </Button>
+            </Link>
+            <Link href="/admin/permissions">
+              <Button variant="outline" className="w-full justify-start h-12 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-200 transition-colors">
+                <ShieldCheck className="mr-3 h-4 w-4" />
+                Configure Access & Permissions
+              </Button>
+            </Link>
+            <Link href="/admin/settings">
+              <Button variant="outline" className="w-full justify-start h-12 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-200 transition-colors">
+                <Settings className="mr-3 h-4 w-4" />
+                Organization Settings
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
 
-            <Card className="bg-white shadow-sm hover:shadow-md transition-all">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center"><BrainCircuit className="w-5 h-5" /></div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">AI Accuracy</span>
-                </div>
-                <div className="text-3xl font-bold text-slate-900 mb-1">—</div>
-                <p className="text-xs text-slate-500 font-medium">Awaiting first interactions</p>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Main Content Area */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-            <Card className="lg:col-span-2 flex flex-col shadow-sm">
-              <CardHeader className="border-b border-slate-100 py-5 px-6 bg-slate-50/50">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold text-slate-900">Recent Knowledge Activity</CardTitle>
-                  <Button variant="ghost" size="sm" className="h-8 text-xs text-primary-600 hover:text-primary-700">View All</Button>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col items-center justify-center min-h-[300px] p-6 text-center">
-                <div className="w-16 h-16 bg-slate-50 rounded-full border border-slate-100 flex items-center justify-center mb-4">
-                  <Activity className="w-6 h-6 text-slate-300" />
-                </div>
-                <h3 className="text-sm font-semibold text-slate-900 mb-1">No recent activity</h3>
-                <p className="text-xs text-slate-500 max-w-[250px] mx-auto mb-6">Activity will appear here once users start querying the knowledge base.</p>
-                <Button variant="outline" size="sm" className="shadow-sm">Go to Documents</Button>
-              </CardContent>
-            </Card>
-
+        <Card className="shadow-sm col-span-1">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <p className="text-sm text-slate-500">Latest events in your workspace</p>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-6">
-              <Card className="shadow-sm">
-                <CardHeader className="py-4 px-6 border-b border-slate-100 bg-slate-50/50">
-                  <CardTitle className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2">
-                  <button className="w-full flex items-center justify-between p-3 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-200">
-                    <span className="flex items-center"><Users className="w-4 h-4 mr-3 text-slate-400" /> Invite Team Members</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-                  <button className="w-full flex items-center justify-between p-3 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-200">
-                    <span className="flex items-center"><Shield className="w-4 h-4 mr-3 text-slate-400" /> Configure Access</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-                  <button className="w-full flex items-center justify-between p-3 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-200">
-                    <span className="flex items-center"><Settings className="w-4 h-4 mr-3 text-slate-400" /> Organization Settings</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
-                  </button>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-primary-900 to-navy-900 text-white shadow-md border-0">
-                <CardContent className="p-6">
-                  <BrainCircuit className="w-8 h-8 text-primary-400 mb-4" />
-                  <h3 className="font-semibold mb-2">Need Help Getting Started?</h3>
-                  <p className="text-sm text-primary-200 mb-4 leading-relaxed">
-                    Read our enterprise setup guide to learn how to structure your documents for optimal AI retrieval.
-                  </p>
-                  <Button className="w-full bg-white text-navy-900 hover:bg-slate-100 shadow-sm">Read the Guide</Button>
-                </CardContent>
-              </Card>
+              {[
+                { icon: FileText, title: "Employee Handbook.pdf", desc: "Successfully processed and indexed", time: "2 hours ago", color: "text-blue-600", bg: "bg-blue-100" },
+                { icon: Users, title: "New Employee Added", desc: "chan@gmail.com granted access", time: "5 hours ago", color: "text-green-600", bg: "bg-green-100" },
+                { icon: Search, title: "Query Spike Detected", desc: "45 queries processed in 1 hour", time: "Yesterday", color: "text-orange-600", bg: "bg-orange-100" },
+                { icon: Settings, title: "Settings Updated", desc: "Organization details modified", time: "2 days ago", color: "text-slate-600", bg: "bg-slate-100" },
+              ].map((activity, i) => (
+                <div key={i} className="flex items-start gap-4">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${activity.bg} ${activity.color}`}>
+                    <activity.icon className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium leading-none">{activity.title}</p>
+                    <p className="text-sm text-slate-500">{activity.desc}</p>
+                  </div>
+                  <div className="text-xs text-slate-400 font-medium whitespace-nowrap">
+                    {activity.time}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
-      </PageTransition>
+            
+            <div className="mt-6 pt-4 border-t border-slate-100">
+              <Link href="/admin/activity" className="text-sm text-primary-600 font-medium hover:text-primary-700 flex items-center">
+                View all activity <ArrowRight className="ml-1 w-4 h-4" />
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+    </div>
     </div>
   )
 }

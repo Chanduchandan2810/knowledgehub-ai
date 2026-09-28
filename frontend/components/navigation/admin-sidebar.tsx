@@ -3,11 +3,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, FileText, Users, Shield, BarChart3, Activity, Settings, BrainCircuit } from 'lucide-react'
 import { cn } from '../ui/button'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/utils/supabase/client'
 
 const workspaceNav = [
+  // Dashboard item requested by user to be at the TOP of the WORKSPACE section
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Documents', href: '/admin/documents', icon: FileText },
-  { name: 'Members', href: '/admin/members', icon: Users },
+  { name: 'Employees', href: '/admin/employees', icon: Users },
   { name: 'Permissions', href: '/admin/permissions', icon: Shield },
 ]
 
@@ -22,6 +25,56 @@ const configNav = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const [orgName, setOrgName] = useState<string>('')
+  const [adminName, setAdminName] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const match = document.cookie.match(/(^|;)\s*khub_org_id\s*=\s*([^;]+)/);
+      const orgId = match ? (match.pop() as string) : '';
+      if (!orgId) {
+        setOrgName('Organization info unavailable')
+        setLoading(false)
+        return
+      }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      try {
+        const [orgRes, authRes] = await Promise.all([
+          fetch('/api/v1/organizations/current', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'X-Organization-Id': orgId
+            }
+          }),
+          fetch('/api/v1/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          })
+        ])
+
+        if (orgRes.ok) {
+          const data = await orgRes.json()
+          setOrgName(data.name)
+        } else {
+          setOrgName('Organization info unavailable')
+        }
+
+        if (authRes.ok) {
+          const authData = await authRes.json()
+          setAdminName(authData.full_name)
+        }
+      } catch (err) {
+        setOrgName('Organization info unavailable')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const NavGroup = ({ items, label }: { items: any[], label: string }) => (
     <div className="mb-6">
@@ -53,11 +106,11 @@ export function AdminSidebar() {
   return (
     <aside className="hidden md:flex flex-col w-[260px] flex-shrink-0 border-r border-slate-200/80 bg-white z-20">
       <div className="h-16 flex items-center px-6 border-b border-slate-100">
-        <Link href="/" className="flex items-center gap-2.5 font-bold text-lg tracking-tight text-slate-900 group">
+        <Link href="/admin/dashboard" className="flex items-center gap-2.5 font-bold text-lg tracking-tight text-slate-900 group">
           <div className="bg-primary-600 text-white p-1 rounded-md shadow-sm group-hover:bg-primary-700 transition-colors">
             <BrainCircuit className="w-4 h-4" />
           </div>
-          KnowledgeHub
+          KnowledgeHub AI
         </Link>
       </div>
       
@@ -69,10 +122,14 @@ export function AdminSidebar() {
       
       <div className="p-4 border-t border-slate-100 bg-slate-50/50">
         <div className="flex items-center px-3 py-2 text-sm rounded-md border border-slate-200 bg-white shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
-          <div className="w-7 h-7 rounded bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-xs mr-3">A</div>
+          <div className="w-7 h-7 rounded bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs mr-3 border border-purple-200">
+            {loading ? '...' : (adminName ? adminName.charAt(0).toUpperCase() : 'A')}
+          </div>
           <div className="flex-1 truncate">
-            <p className="font-semibold text-slate-900 truncate text-xs">Acme Corp</p>
-            <p className="text-[10px] text-slate-500 truncate">Enterprise Plan</p>
+            <p className="font-semibold text-slate-900 truncate text-xs">
+              {loading ? 'Loading...' : (adminName || 'Admin')}
+            </p>
+            <p className="text-[10px] font-bold text-purple-600 truncate tracking-wide uppercase">ADMIN PORTAL &bull; {orgName || 'N/A'}</p>
           </div>
         </div>
       </div>

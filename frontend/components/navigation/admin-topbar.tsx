@@ -2,8 +2,64 @@
 import { Bell, Search, Menu, HelpCircle } from 'lucide-react'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
+import { LogoutButton } from '../shared/logout-button'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/utils/supabase/client'
 
 export function AdminTopbar({ title, description }: { title: string, description?: string }) {
+  const [orgName, setOrgName] = useState<string>('')
+  const [adminName, setAdminName] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const match = document.cookie.match(/(^|;)\s*khub_org_id\s*=\s*([^;]+)/);
+      const orgId = match ? (match.pop() as string) : '';
+      if (!orgId) {
+        setOrgName('Organization info unavailable')
+        setLoading(false)
+        return
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      try {
+        const [orgRes, authRes] = await Promise.all([
+          fetch('/api/v1/organizations/current', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'X-Organization-Id': orgId
+            }
+          }),
+          fetch('/api/v1/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          })
+        ])
+
+        if (orgRes.ok) {
+          const data = await orgRes.json()
+          setOrgName(data.name)
+        } else {
+          setOrgName('Organization info unavailable')
+        }
+
+        if (authRes.ok) {
+          const authData = await authRes.json()
+          setAdminName(authData.full_name)
+        }
+      } catch (err) {
+        setOrgName('Organization info unavailable')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
   return (
     <header className="h-16 flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-4 sm:px-6 z-10">
       <div className="flex items-center gap-4">
@@ -17,19 +73,27 @@ export function AdminTopbar({ title, description }: { title: string, description
       </div>
       
       <div className="flex items-center gap-3 sm:gap-4">
-        <div className="relative hidden lg:block w-64 xl:w-80">
+        <div className="hidden lg:flex items-center mr-4 border-r border-slate-200 pr-4">
+          <div className="text-right">
+            <p className="text-sm font-bold text-slate-900 max-w-[160px] truncate">
+              {loading ? 'Loading...' : (adminName || 'Admin')}
+            </p>
+            <p className="text-[10px] font-bold text-purple-600 tracking-wider">ADMIN</p>
+          </div>
+        </div>
+        
+        <div className="relative hidden xl:block w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
           <Input type="search" placeholder="Search knowledge base..." className="w-full pl-9 bg-slate-50 border-slate-200 text-sm h-9 rounded-md shadow-inner transition-all focus:bg-white" />
         </div>
         
-        <div className="flex items-center gap-1 sm:gap-2 border-l border-slate-200 pl-3 sm:pl-4">
-          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 rounded-full h-8 w-8"><HelpCircle className="h-4 w-4" /></Button>
+        <div className="flex items-center gap-1 sm:gap-2 pl-2">
           <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 rounded-full h-8 w-8 relative">
             <Bell className="h-4 w-4" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white"></span>
           </Button>
-          <div className="ml-2 w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold cursor-pointer ring-2 ring-transparent hover:ring-slate-200 transition-all">
-            AD
+          <LogoutButton />
+          <div className="ml-2 w-8 h-8 rounded-full bg-purple-100 text-purple-700 border border-purple-200 flex items-center justify-center text-xs font-bold cursor-default shadow-sm hidden sm:flex">
+            {loading ? '...' : (adminName ? adminName.charAt(0).toUpperCase() : 'A')}
           </div>
         </div>
       </div>

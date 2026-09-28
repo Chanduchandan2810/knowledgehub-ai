@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     
     SUPABASE_URL: str
     SUPABASE_KEY: str
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    
     NEXT_PUBLIC_SUPABASE_ANON_KEY: str
     SUPABASE_JWT_SECRET: str
     
@@ -19,3 +21,5 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=str(ROOT_DIR / ".env"), case_sensitive=True, extra="ignore")
 
 settings = Settings()
+
+

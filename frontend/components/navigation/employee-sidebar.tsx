@@ -1,11 +1,64 @@
 "use client"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MessageSquare, Plus, BrainCircuit, Search, LogOut, Settings } from 'lucide-react'
+import { MessageSquare, Plus, BrainCircuit, Search, LogOut, Settings, User } from 'lucide-react'
 import { Button, cn } from '../ui/button'
+import { LogoutButton } from '../shared/logout-button'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/utils/supabase/client'
 
 export function EmployeeSidebar() {
   const pathname = usePathname()
+  const [orgName, setOrgName] = useState<string>('')
+  const [empName, setEmpName] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const match = document.cookie.match(/(^|;)\s*khub_org_id\s*=\s*([^;]+)/);
+      const orgId = match ? (match.pop() as string) : '';
+      
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const [orgRes, userRes] = await Promise.all([
+          orgId ? fetch('/api/v1/organizations/current', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'X-Organization-Id': orgId
+            }
+          }) : Promise.resolve(null),
+          fetch('/api/v1/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          })
+        ])
+
+        if (orgRes && orgRes.ok) {
+          const orgData = await orgRes.json()
+          setOrgName(orgData.name)
+        } else {
+          setOrgName('Organization info unavailable')
+        }
+
+        if (userRes.ok) {
+          const userData = await userRes.json()
+          setEmpName(userData.full_name || userData.email)
+        }
+      } catch (err) {
+        setOrgName('Organization info unavailable')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   return (
     <aside className="hidden md:flex flex-col w-[260px] flex-shrink-0 border-r border-slate-200 bg-slate-50/50 z-20">
@@ -14,7 +67,7 @@ export function EmployeeSidebar() {
           <div className="bg-primary-600 text-white p-1 rounded-md shadow-sm group-hover:bg-primary-700 transition-colors">
             <BrainCircuit className="w-4 h-4" />
           </div>
-          KnowledgeHub
+          KnowledgeHub AI
         </Link>
       </div>
       
@@ -24,21 +77,13 @@ export function EmployeeSidebar() {
         </Button>
       </div>
 
-      <div className="px-4 pb-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-          <input type="text" placeholder="Search conversations..." className="w-full pl-8 pr-3 py-1.5 text-sm bg-white border border-slate-200 rounded-md shadow-sm focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400 transition-all" />
-        </div>
-      </div>
-
-      <div className="flex-1 py-4 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 py-2 overflow-y-auto custom-scrollbar">
         <h3 className="px-5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">History</h3>
         <nav className="space-y-0.5 px-3">
           {[
             { id: 1, title: 'Annual Leave Policy & Carryover', active: true },
             { id: 2, title: 'Hardware Request Process', active: false },
             { id: 3, title: 'Q3 Financial Summary Review', active: false },
-            { id: 4, title: 'Onboarding Checklist 2024', active: false },
           ].map(chat => (
             <Link key={chat.id} href="/employee/conversations" className={cn(
               "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 group",
@@ -51,16 +96,37 @@ export function EmployeeSidebar() {
         </nav>
       </div>
 
-      <div className="p-4 border-t border-slate-200/60 bg-transparent flex flex-col gap-1">
-        <Link href="/employee/profile" className={cn(
-          "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-          pathname === "/employee/profile" ? "bg-slate-200/50 text-slate-900" : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
-        )}>
-          <Settings className="w-4 h-4 mr-3 text-slate-400" /> Profile Settings
-        </Link>
-        <button className="flex items-center px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200/50 hover:text-slate-900 rounded-md transition-colors">
-          <LogOut className="w-4 h-4 mr-3 text-slate-400" /> Sign Out
-        </button>
+      <div className="p-4 border-t border-slate-200/60 bg-white">
+        <div className="flex items-center px-3 py-2 mb-3 text-sm rounded-md border border-slate-200 bg-slate-50 shadow-sm transition-colors">
+          <div className="w-8 h-8 rounded bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-xs mr-3 border border-primary-200">
+            {loading ? '...' : (empName ? empName.charAt(0).toUpperCase() : 'U')}
+          </div>
+          <div className="flex-1 truncate">
+            <p className="text-[10px] font-semibold text-slate-500 truncate mb-0.5 tracking-wide">
+              {loading ? 'Loading...' : (orgName || 'Organization info unavailable')}
+            </p>
+            <p className="font-semibold text-slate-900 truncate text-sm leading-tight">
+              {loading ? 'Loading...' : (empName || 'Employee')}
+            </p>
+            <p className="text-[10px] font-bold text-slate-400 tracking-widest mt-0.5 uppercase">EMPLOYEE</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Link href="/employee/profile" className={cn(
+            "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+            pathname === "/employee/profile" ? "bg-slate-100 text-slate-900" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          )}>
+            <User className="w-4 h-4 mr-3 text-slate-400" /> Profile
+          </Link>
+          <Link href="/employee/settings" className={cn(
+            "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+            pathname === "/employee/settings" || pathname === "/employee/change-password" ? "bg-slate-100 text-slate-900" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          )}>
+            <Settings className="w-4 h-4 mr-3 text-slate-400" /> Settings
+          </Link>
+          <LogoutButton variant="full" />
+        </div>
       </div>
     </aside>
   )
