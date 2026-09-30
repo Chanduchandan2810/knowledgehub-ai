@@ -81,7 +81,8 @@ export default function AdminDocuments() {
       const res = await fetch('/api/v1/documents', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
-        }
+        },
+        cache: 'no-store'
       })
       if (res.ok) {
         const data = await res.json()
@@ -228,10 +229,12 @@ export default function AdminDocuments() {
       // Parallel fetch permissions and organization employees
       const [permsRes, empsRes] = await Promise.all([
         fetch(`/api/v1/documents/${doc.id}/permissions`, {
-          headers: { 'Authorization': `Bearer ${session.access_token}` }
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+          cache: 'no-store'
         }),
         fetch('/api/v1/employees', {
-          headers: { 'Authorization': `Bearer ${session.access_token}` }
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+          cache: 'no-store'
         })
       ])
 
