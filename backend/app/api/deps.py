@@ -1,4 +1,4 @@
-﻿import uuid
+import uuid
 from typing import AsyncGenerator
 from fastapi import Depends, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,7 @@ from app.models.employee import Employee
 from pydantic import BaseModel
 
 class UserContext(BaseModel):
+    user_id: uuid.UUID
     auth_user_id: uuid.UUID
     organization_id: uuid.UUID
     role: str
@@ -36,6 +37,7 @@ async def get_current_user_context(
     
     if admin:
         ctx = UserContext(
+            user_id=admin.id,
             auth_user_id=admin.auth_user_id,
             organization_id=admin.organization_id,
             role="ADMIN",
@@ -53,6 +55,7 @@ async def get_current_user_context(
         
         if emp:
             ctx = UserContext(
+                user_id=emp.id,
                 auth_user_id=emp.auth_user_id,
                 organization_id=emp.organization_id,
                 role="EMPLOYEE",

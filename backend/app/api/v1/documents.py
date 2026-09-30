@@ -35,7 +35,7 @@ async def upload_document(
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename missing")
     
-    # 1. Validate file size and type
+    # 1. Validate file size and content
     file_bytes = await file.read()
     file_size = len(file_bytes)
     if file_size > MAX_FILE_SIZE:
@@ -43,38 +43,41 @@ async def upload_document(
     if file_size == 0:
         raise HTTPException(status_code=400, detail="File is empty.")
     
-    # Use content_type but fallback to basic extension check
+    # Validate MIME type and verify file signature
     mime_type = file.content_type
-    if not mime_type or mime_type not in ALLOWED_MIME_TYPES:
-        if not file.filename.lower().endswith(('.pdf', '.txt')):
-            raise HTTPException(status_code=400, detail="Unsupported file type. Only PDF and TXT are allowed.")
-        mime_type = "application/pdf" if file.filename.lower().endswith('.pdf') else "text/plain"
+    filename_lower = file.filename.lower()
+    if filename_lower.endswith(".pdf") or mime_type == "application/pdf":
+        if not file_bytes.startswith(b"%PDF-"):
+            raise HTTPException(status_code=400, detail="Invalid PDF file. Header signature mismatch.")
+        mime_type = "application/pdf"
+    elif filename_lower.endswith(".txt") or mime_type == "text/plain":
+        try:
+            file_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid text file. Must be UTF-8 encoded text.")
+        mime_type = "text/plain"
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported file type. Only PDF and TXT are allowed.")
 
-    # 2. Get admin user id for uploaded_by
-    result = await db.execute(select(Admin).where(Admin.auth_user_id == ctx.auth_user_id))
-    admin = result.scalar_one_or_none()
-    if not admin:
-        raise HTTPException(status_code=500, detail="Admin record not found.")
-
-    # 3. Create document ID & Storage Path
+    # 2. Create document ID & Storage Path
     doc_id = uuid.uuid4()
-    # Simple safe filename - just remove weird chars or use UUID. We'll use uuid for uniqueness
-    # organizations/{org_id}/documents/{doc_id}/filename.pdf
-    safe_filename = "".join(c for c in file.filename if c.isalnum() or c in " .-_")
+    safe_filename = "".join(c for c in file.filename if c.isalnum() or c in " .-_").strip()
+    if not safe_filename:
+        safe_filename = f"doc_{doc_id}.pdf" if mime_type == "application/pdf" else f"doc_{doc_id}.txt"
     storage_path = f"organizations/{ctx.organization_id}/documents/{doc_id}/{safe_filename}"
 
-    # 4. Upload to storage
+    # 3. Upload to storage
     try:
         await upload_document_to_storage(file_bytes, storage_path, mime_type)
     except Exception as e:
         logger.error(f"Storage upload failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to upload document to storage")
 
-    # 5. Create database record
+    # 4. Create database record
     new_doc = Document(
         id=doc_id,
         organization_id=ctx.organization_id,
-        uploaded_by=admin.id,
+        uploaded_by=ctx.user_id,
         filename=safe_filename,
         storage_path=storage_path,
         mime_type=mime_type,
@@ -87,11 +90,11 @@ async def upload_document(
         await db.refresh(new_doc)
     except Exception as e:
         await db.rollback()
-        # Attempt to clean up storage if DB fails
+        # Clean up storage if DB fails
         try:
             await delete_document_from_storage(storage_path)
-        except:
-            pass
+        except Exception as se:
+            logger.error(f"Failed to cleanup storage after DB error: {se}")
         logger.error(f"Database insert failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to save document metadata")
         

@@ -70,10 +70,12 @@ def upgrade() -> None:
                 AND d.organization_id = (NULLIF(current_setting('app.current_tenant', true), ''))::uuid
             )
         );
-    """)
+    # Grants for authenticated role
+    op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON documents, document_permissions, admins TO authenticated;")
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.execute("REVOKE SELECT, INSERT, UPDATE, DELETE ON documents, document_permissions, admins FROM authenticated;")
     op.execute("DROP POLICY IF EXISTS \"Tenant isolation for document_permissions\" ON document_permissions;")
     op.execute("DROP POLICY IF EXISTS \"Tenant isolation for documents\" ON documents;")
     op.execute("ALTER TABLE document_permissions DISABLE ROW LEVEL SECURITY;")
