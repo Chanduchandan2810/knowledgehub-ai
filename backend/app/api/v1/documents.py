@@ -142,18 +142,20 @@ async def delete_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
         
-    # Delete from storage first
-    try:
-        await delete_document_from_storage(doc.storage_path)
-    except Exception as e:
-        logger.error(f"Storage delete failed: {e}")
-        # We may still want to delete the DB record if it's orphaned, but usually we halt.
-        # Let's halt to prevent DB and Storage getting fully out of sync without manual intervention.
-        raise HTTPException(status_code=500, detail="Failed to delete document from storage")
+    storage_path = doc.storage_path
 
-    # Delete from DB (document_permissions cascade on delete)
+    # 1. Delete from DB first (document_permissions cascade on delete)
     await db.delete(doc)
     await db.commit()
+
+    # 2. Delete corresponding Storage object
+    try:
+        await delete_document_from_storage(storage_path)
+    except Exception as e:
+        logger.error(f"Storage delete failed for path {storage_path} after DB record was deleted: {e}")
+        # Note: We do not fail the request or recreate the DB record, as the metadata is already purged.
+        # The orphaned file can be cleaned up via background reconciliation.
+
     return None
 
 
@@ -196,15 +198,17 @@ async def add_document_permission(
         
     # Verify employee exists and belongs to the SAME organization
     emp_query = select(Employee).where(
-        Employee.id == data.employee_id,
+        (Employee.id == data.employee_id) | (Employee.auth_user_id == data.employee_id),
         Employee.organization_id == ctx.organization_id
     )
-    if not (await db.execute(emp_query)).scalar_one_or_none():
+    result = await db.execute(emp_query)
+    emp = result.scalar_one_or_none()
+    if not emp:
         raise HTTPException(status_code=404, detail="Employee not found or belongs to another organization")
         
     new_perm = DocumentPermission(
         document_id=document_id,
-        employee_id=data.employee_id
+        employee_id=emp.id
     )
     db.add(new_perm)
     try:
@@ -232,10 +236,18 @@ async def remove_document_permission(
     if not (await db.execute(doc_query)).scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Document not found")
         
+    # Resolve target employee (either by id or auth_user_id)
+    emp_query = select(Employee).where(
+        (Employee.id == employee_id) | (Employee.auth_user_id == employee_id),
+        Employee.organization_id == ctx.organization_id
+    )
+    emp = (await db.execute(emp_query)).scalar_one_or_none()
+    target_emp_id = emp.id if emp else employee_id
+
     # Find and delete
     perm_query = select(DocumentPermission).where(
         DocumentPermission.document_id == document_id,
-        DocumentPermission.employee_id == employee_id
+        DocumentPermission.employee_id == target_emp_id
     )
     perm = (await db.execute(perm_query)).scalar_one_or_none()
     if not perm:

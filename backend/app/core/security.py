@@ -12,8 +12,12 @@ supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
     token = credentials.credentials
     try:
-        # Securely verify token and get user from Supabase Auth Server directly
-        user_response = supabase.auth.get_user(token)
+        # Securely verify token and get user from Supabase Auth Server directly with retry for transient pool disconnects
+        try:
+            user_response = supabase.auth.get_user(token)
+        except Exception:
+            user_response = supabase.auth.get_user(token)
+
         user = user_response.user
         
         if not user:
@@ -24,5 +28,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Security(security))
             "email": user.email,
             "user_metadata": user.user_metadata or {}
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Authentication failed: {str(e)}")

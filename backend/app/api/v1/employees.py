@@ -1,4 +1,4 @@
-﻿from typing import List
+from typing import List
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +16,7 @@ class EmployeeCreate(BaseModel):
 
 class EmployeeResponse(BaseModel):
     id: uuid.UUID
+    auth_user_id: uuid.UUID
     email: str
     full_name: str
     role: str
@@ -37,7 +38,8 @@ async def list_employees(
     employees = []
     for emp in result.scalars().all():
         employees.append({
-            "id": emp.auth_user_id,
+            "id": emp.id,
+            "auth_user_id": emp.auth_user_id,
             "email": emp.email,
             "full_name": emp.full_name,
             "role": "EMPLOYEE",
@@ -82,7 +84,8 @@ async def create_employee(
     await db.refresh(new_emp)
     
     return {
-        "id": new_emp.auth_user_id,
+        "id": new_emp.id,
+        "auth_user_id": new_emp.auth_user_id,
         "email": new_emp.email,
         "full_name": new_emp.full_name,
         "role": "EMPLOYEE",
