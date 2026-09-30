@@ -1,7 +1,7 @@
 import uuid
 import logging
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
@@ -16,9 +16,11 @@ from app.models.employee import Employee
 from app.schemas.document import (
     DocumentResponse, 
     DocumentPermissionResponse, 
-    DocumentPermissionCreate
+    DocumentPermissionCreate,
+    DocumentReprocessResponse
 )
 from app.core.storage import upload_document_to_storage, delete_document_from_storage
+from app.services.documents.processor import process_document
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -28,6 +30,7 @@ ALLOWED_MIME_TYPES = ["application/pdf", "text/plain"]
 
 @router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     ctx: UserContext = Depends(require_admin_role),
     db: AsyncSession = Depends(get_db)
@@ -101,6 +104,7 @@ async def upload_document(
         logger.error(f"Database insert/commit failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to save document metadata")
         
+    background_tasks.add_task(process_document, str(new_doc.id))
     return response
 
 @router.get("", response_model=List[DocumentResponse])
@@ -260,3 +264,30 @@ async def remove_document_permission(
     await db.commit()
     return None
 
+@router.post("/{document_id}/process", response_model=DocumentReprocessResponse)
+async def reprocess_document(
+    document_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    ctx: UserContext = Depends(require_admin_role)
+):
+    """
+    Explicitly reprocess a FAILED or PROCESSED document (Admin only).
+    """
+    stmt = select(Document).where(Document.id == document_id)
+    result = await db.execute(stmt)
+    doc = result.scalar_one_or_none()
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    if doc.status == DocumentStatus.PROCESSING.value:
+        raise HTTPException(status_code=400, detail="Document is already processing")
+        
+    background_tasks.add_task(process_document, str(doc.id))
+    
+    return DocumentReprocessResponse(
+        message="Document reprocessing queued successfully",
+        document_id=doc.id,
+        status=DocumentStatus.PROCESSING
+    )

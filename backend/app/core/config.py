@@ -17,6 +17,22 @@ class Settings(BaseSettings):
     
     DATABASE_URL: str
     MIGRATION_DATABASE_URL: str
+    
+    # Phase 4 Document Processing Config
+    EMBEDDING_PROVIDER: str = "local"
+    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    EMBEDDING_DIMENSIONS: int = 384
+    EMBEDDING_BATCH_SIZE: int = 32
+    
+    # These chunking values are defaults but the processor will dynamically 
+    # adjust based on the model's actual max_seq_length.
+    CHUNK_SIZE_TOKENS: int = 200
+    CHUNK_OVERLAP_PERCENT: float = 0.15
+    
+    MAX_PAGE_COUNT: int = 500
+    MAX_CHUNK_COUNT: int = 5000
+    PROCESSING_TIMEOUT_MINUTES: int = 30
+    MIN_CONTENT_LENGTH: int = 50
 
     model_config = SettingsConfigDict(env_file=str(ROOT_DIR / ".env"), case_sensitive=True, extra="ignore")
 

@@ -19,6 +19,15 @@ class DocumentResponse(DocumentBase):
     organization_id: UUID
     uploaded_by: Optional[UUID]
     status: DocumentStatus
+    
+    # Phase 4 fields
+    processing_started_at: Optional[datetime] = None
+    processed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    attempt_count: int = 0
+    chunk_count: Optional[int] = None
+    embedding_model: Optional[str] = None
+
     created_at: datetime
     updated_at: datetime
     
@@ -36,3 +45,8 @@ class DocumentPermissionResponse(DocumentPermissionBase):
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+
+class DocumentReprocessResponse(BaseModel):
+    message: str
+    document_id: UUID
+    status: DocumentStatus

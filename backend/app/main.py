@@ -1,11 +1,47 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
+from sqlalchemy import text
+from app.db.session import AsyncSessionLocal
+from app.models.document import DocumentStatus
+from app.core.config import settings
 from app.api.v1 import organizations
+
+logger = logging.getLogger(__name__)
+
+async def cleanup_stale_processing():
+    """Resets documents stuck in PROCESSING for longer than timeout."""
+    try:
+        async with AsyncSessionLocal() as session:
+            stmt = text(f"""
+                UPDATE documents
+                SET status = :failed_status,
+                    error_message = 'Processing timed out after {settings.PROCESSING_TIMEOUT_MINUTES} minutes.'
+                WHERE status = :processing_status
+                  AND processing_started_at < NOW() - INTERVAL '{settings.PROCESSING_TIMEOUT_MINUTES} minutes'
+            """).bindparams(
+                failed_status=DocumentStatus.FAILED.value,
+                processing_status=DocumentStatus.PROCESSING.value
+            )
+            result = await session.execute(stmt)
+            await session.commit()
+            if result.rowcount > 0:
+                logger.warning(f"Reset {result.rowcount} stale processing documents to FAILED.")
+    except Exception as e:
+        logger.error(f"Failed to cleanup stale processing: {e}")
+
+async def lifespan(app: FastAPI):
+    # Startup
+    await cleanup_stale_processing()
+    yield
+    # Shutdown
+    pass
 
 app = FastAPI(
     title="KnowledgeHub AI API",
     description="Backend API for KnowledgeHub AI - B2B Multi-Tenant GenAI Knowledge Platform",
     version="1.0.0",
+    lifespan=lifespan
 )
 
 # Configure CORS for frontend
