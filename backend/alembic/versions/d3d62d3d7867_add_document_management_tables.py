@@ -70,6 +70,7 @@ def upgrade() -> None:
                 AND d.organization_id = (NULLIF(current_setting('app.current_tenant', true), ''))::uuid
             )
         );
+    """)
     # Grants for authenticated role
     op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON documents, document_permissions, admins TO authenticated;")
 

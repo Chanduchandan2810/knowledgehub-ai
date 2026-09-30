@@ -13,7 +13,8 @@ import {
   Loader2, 
   UserCheck, 
   UserX,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react'
 import { PageTransition } from '@/components/shared/page-transition'
 import { useState, useEffect, useCallback } from 'react'
@@ -27,6 +28,8 @@ interface DocumentData {
   file_size: number
   status: string
   created_at: string
+  chunk_count?: number
+  error_message?: string
 }
 
 interface EmployeeData {
@@ -92,6 +95,43 @@ export default function AdminDocuments() {
   useEffect(() => {
     fetchDocuments()
   }, [fetchDocuments])
+
+  // Polling for processing documents
+  useEffect(() => {
+    const hasProcessing = documents.some(d => d.status === 'PROCESSING' || d.status === 'UPLOADED')
+    if (hasProcessing) {
+      const interval = setInterval(() => {
+        fetchDocuments()
+      }, 3000)
+      return () => clearInterval(interval)
+    }
+  }, [documents, fetchDocuments])
+
+  const [reprocessingId, setReprocessingId] = useState<string | null>(null)
+
+  const handleReprocess = async (documentId: string) => {
+    if (reprocessingId) return
+    setReprocessingId(documentId)
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const res = await fetch(`/api/v1/documents/${documentId}/process`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+      
+      if (res.ok) {
+        // Optimistically update
+        setDocuments(prev => prev.map(d => d.id === documentId ? { ...d, status: 'PROCESSING' } : d))
+      }
+    } finally {
+      setReprocessingId(null)
+    }
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -350,12 +390,38 @@ export default function AdminDocuments() {
                       <span>{doc.mime_type}</span>
                       <span>{formatSize(doc.file_size)}</span>
                     </div>
-                    <div className="col-span-2 hidden lg:block">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/50">
-                        {doc.status}
-                      </span>
+                    <div className="col-span-2 hidden lg:flex items-center gap-1">
+                      {doc.status === 'PROCESSED' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200/50" title={doc.chunk_count ? `${doc.chunk_count} chunks` : ''}>
+                          Processed
+                        </span>
+                      ) : doc.status === 'PROCESSING' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/50">
+                          <Loader2 className="w-3 h-3 animate-spin mr-1" /> Processing
+                        </span>
+                      ) : doc.status === 'FAILED' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200/50" title={doc.error_message || 'Failed'}>
+                          <AlertCircle className="w-3 h-3 mr-1" /> Failed
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200/50">
+                          Pending
+                        </span>
+                      )}
                     </div>
-                    <div className="col-span-6 md:col-span-4 lg:col-span-2 flex items-center justify-end gap-2">
+                    <div className="col-span-6 md:col-span-4 lg:col-span-2 flex items-center justify-end gap-1">
+                      {(doc.status === 'FAILED' || doc.status === 'PROCESSED') && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-slate-500 hover:text-amber-600 hover:bg-amber-50"
+                          title="Reprocess Document"
+                          disabled={reprocessingId === doc.id}
+                          onClick={() => handleReprocess(doc.id)}
+                        >
+                          <RefreshCw className={`w-4 h-4 ${reprocessingId === doc.id ? 'animate-spin text-amber-500' : ''}`} />
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="icon" 
