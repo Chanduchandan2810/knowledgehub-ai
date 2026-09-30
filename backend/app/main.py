@@ -29,6 +29,9 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 from app.api.v1 import employees
 app.include_router(employees.router, prefix="/api/v1/employees", tags=["employees"])
 
+from app.api.v1 import documents
+app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
+
 from fastapi.responses import JSONResponse
 import traceback
 import logging
@@ -42,3 +45,4 @@ async def global_exception_handler(request, exc):
         status_code=500,
         content={"detail": "An unexpected internal server error occurred."}
     )
+
