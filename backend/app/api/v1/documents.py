@@ -86,19 +86,22 @@ async def upload_document(
     )
     db.add(new_doc)
     try:
+        await db.flush()
+        # Capture the database-generated values before committing
+        from app.schemas.document import DocumentResponse
+        response = DocumentResponse.model_validate(new_doc)
         await db.commit()
-        await db.refresh(new_doc)
     except Exception as e:
         await db.rollback()
-        # Clean up storage if DB fails
+        # Clean up storage if DB insert or commit fails
         try:
             await delete_document_from_storage(storage_path)
         except Exception as se:
             logger.error(f"Failed to cleanup storage after DB error: {se}")
-        logger.error(f"Database insert failed: {e}")
+        logger.error(f"Database insert/commit failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to save document metadata")
         
-    return new_doc
+    return response
 
 @router.get("", response_model=List[DocumentResponse])
 async def list_documents(
