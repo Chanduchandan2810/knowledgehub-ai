@@ -9,6 +9,7 @@ import { createClient } from '@/utils/supabase/client'
 const workspaceNav = [
   // Dashboard item requested by user to be at the TOP of the WORKSPACE section
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+  { name: 'AI Chat', href: '/admin/chat', icon: BrainCircuit },
   { name: 'Documents', href: '/admin/documents', icon: FileText },
   { name: 'Employees', href: '/admin/employees', icon: Users },
   { name: 'Permissions', href: '/admin/permissions', icon: Shield },

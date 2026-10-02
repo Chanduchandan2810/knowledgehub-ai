@@ -95,6 +95,12 @@ async def upload_document(
         await db.flush()
         
         if access_scope == AccessScope.ORGANIZATION:
+            # Grant uploader (Admin)
+            db.add(DocumentPermission(
+                document_id=doc_id,
+                admin_id=ctx.user_id
+            ))
+            
             emps_query = select(Employee.id).where(Employee.organization_id == ctx.organization_id)
             emp_ids = (await db.execute(emps_query)).scalars().all()
             for emp_id in emp_ids:
@@ -208,6 +214,11 @@ async def add_document_permission(
     if document_id != data.document_id:
         raise HTTPException(status_code=400, detail="Mismatched document ID")
 
+    if not data.employee_id and not data.admin_id:
+        raise HTTPException(status_code=400, detail="Must provide either employee_id or admin_id")
+    if data.employee_id and data.admin_id:
+        raise HTTPException(status_code=400, detail="Cannot provide both employee_id and admin_id")
+
     # Verify document ownership
     doc_query = select(Document).where(
         Document.id == document_id, 
@@ -216,19 +227,32 @@ async def add_document_permission(
     if not (await db.execute(doc_query)).scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Document not found")
         
-    # Verify employee exists and belongs to the SAME organization
-    emp_query = select(Employee).where(
-        (Employee.id == data.employee_id) | (Employee.auth_user_id == data.employee_id),
-        Employee.organization_id == ctx.organization_id
-    )
-    result = await db.execute(emp_query)
-    emp = result.scalar_one_or_none()
-    if not emp:
-        raise HTTPException(status_code=404, detail="Employee not found or belongs to another organization")
-        
+    target_employee_id = None
+    target_admin_id = None
+
+    if data.employee_id:
+        emp_query = select(Employee).where(
+            (Employee.id == data.employee_id) | (Employee.auth_user_id == data.employee_id),
+            Employee.organization_id == ctx.organization_id
+        )
+        emp = (await db.execute(emp_query)).scalar_one_or_none()
+        if not emp:
+            raise HTTPException(status_code=404, detail="Employee not found or belongs to another organization")
+        target_employee_id = emp.id
+    else:
+        admin_query = select(Admin).where(
+            (Admin.id == data.admin_id) | (Admin.auth_user_id == data.admin_id),
+            Admin.organization_id == ctx.organization_id
+        )
+        adm = (await db.execute(admin_query)).scalar_one_or_none()
+        if not adm:
+            raise HTTPException(status_code=404, detail="Admin not found or belongs to another organization")
+        target_admin_id = adm.id
+
     new_perm = DocumentPermission(
         document_id=document_id,
-        employee_id=emp.id
+        employee_id=target_employee_id,
+        admin_id=target_admin_id
     )
     db.add(new_perm)
     try:
@@ -241,10 +265,10 @@ async def add_document_permission(
     return new_perm
 
 
-@router.delete("/{document_id}/permissions/{employee_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{document_id}/permissions/{target_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_document_permission(
     document_id: uuid.UUID,
-    employee_id: uuid.UUID,
+    target_id: uuid.UUID,
     ctx: UserContext = Depends(require_admin_role),
     db: AsyncSession = Depends(get_db)
 ):
@@ -256,19 +280,29 @@ async def remove_document_permission(
     if not (await db.execute(doc_query)).scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Document not found")
         
-    # Resolve target employee (either by id or auth_user_id)
+    # Check if target is employee
     emp_query = select(Employee).where(
-        (Employee.id == employee_id) | (Employee.auth_user_id == employee_id),
+        (Employee.id == target_id) | (Employee.auth_user_id == target_id),
         Employee.organization_id == ctx.organization_id
     )
     emp = (await db.execute(emp_query)).scalar_one_or_none()
-    target_emp_id = emp.id if emp else employee_id
-
-    # Find and delete
-    perm_query = select(DocumentPermission).where(
-        DocumentPermission.document_id == document_id,
-        DocumentPermission.employee_id == target_emp_id
+    
+    # Check if target is admin
+    adm_query = select(Admin).where(
+        (Admin.id == target_id) | (Admin.auth_user_id == target_id),
+        Admin.organization_id == ctx.organization_id
     )
+    adm = (await db.execute(adm_query)).scalar_one_or_none()
+
+    if not emp and not adm:
+        raise HTTPException(status_code=404, detail="Target user not found or belongs to another organization")
+        
+    perm_query = select(DocumentPermission).where(DocumentPermission.document_id == document_id)
+    if emp:
+        perm_query = perm_query.where(DocumentPermission.employee_id == emp.id)
+    else:
+        perm_query = perm_query.where(DocumentPermission.admin_id == adm.id)
+        
     perm = (await db.execute(perm_query)).scalar_one_or_none()
     if not perm:
         raise HTTPException(status_code=404, detail="Permission not found")

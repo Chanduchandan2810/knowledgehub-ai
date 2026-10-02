@@ -68,6 +68,9 @@ app.include_router(employees.router, prefix="/api/v1/employees", tags=["employee
 from app.api.v1 import documents
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
 
+from app.api.v1 import retrieval
+app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
+
 from fastapi.responses import JSONResponse
 import traceback
 import logging

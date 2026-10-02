@@ -38,7 +38,8 @@ class DocumentScopeUpdate(BaseModel):
     access_scope: AccessScope
 
 class DocumentPermissionBase(BaseModel):
-    employee_id: UUID
+    employee_id: UUID | None = None
+    admin_id: UUID | None = None
 
 class DocumentPermissionCreate(DocumentPermissionBase):
     document_id: UUID

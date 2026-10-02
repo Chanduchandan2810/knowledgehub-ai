@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # adjust based on the model's actual max_seq_length.
     CHUNK_SIZE_TOKENS: int = 200
     CHUNK_OVERLAP_PERCENT: float = 0.15
+
+    # Phase 5 Retrieval Config
+    RETRIEVAL_TOP_K: int = 5
+    RETRIEVAL_THRESHOLD_COSINE_DISTANCE: float = 0.65
     
     MAX_PAGE_COUNT: int = 500
     MAX_CHUNK_COUNT: int = 5000
