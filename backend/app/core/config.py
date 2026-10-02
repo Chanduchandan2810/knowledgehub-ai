@@ -1,4 +1,5 @@
 import os
+import uuid
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -37,6 +38,11 @@ class Settings(BaseSettings):
     MAX_CHUNK_COUNT: int = 5000
     PROCESSING_TIMEOUT_MINUTES: int = 30
     MIN_CONTENT_LENGTH: int = 50
+
+    # Demo Sandbox Config
+    DEMO_ORG_ID: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    DEMO_ADMIN_ID: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000002")
+    DEMO_EMPLOYEE_ID: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000003")
 
     model_config = SettingsConfigDict(env_file=str(ROOT_DIR / ".env"), case_sensitive=True, extra="ignore")
 

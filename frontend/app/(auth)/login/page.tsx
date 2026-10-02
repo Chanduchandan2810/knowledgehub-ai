@@ -22,6 +22,10 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
+    // Clear any active demo cookies before logging in
+    document.cookie = 'demo_role=; path=/; max-age=0'
+    document.cookie = 'khub_role=; path=/; max-age=0'
+
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,

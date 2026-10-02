@@ -1,18 +1,34 @@
 "use client"
-import { BrainCircuit, Send, Database, ShieldCheck, HelpCircle } from 'lucide-react'
+import { BrainCircuit, Send, Database, ShieldCheck, HelpCircle, Users, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { PageTransition } from '@/components/shared/page-transition'
 import { motion } from 'framer-motion'
-import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export default function DemoPage() {
-  const [query, setQuery] = useState('')
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState<string | null>(null)
+
+  const handleDemoLogin = (role: 'ADMIN' | 'EMPLOYEE') => {
+    setIsLoading(role)
+    // Set demo cookies
+    document.cookie = `demo_role=${role}; path=/; max-age=3600`
+    document.cookie = `khub_role=${role}; path=/; max-age=3600`
+    
+    // Slight delay for UX
+    setTimeout(() => {
+      if (role === 'ADMIN') {
+        router.push('/admin/dashboard')
+      } else {
+        router.push('/employee/chat')
+      }
+    }, 600)
+  }
 
   return (
-    <PageTransition className="flex flex-col h-screen bg-slate-50 relative overflow-hidden">
-      
+    <PageTransition className="flex flex-col min-h-screen bg-slate-50 relative overflow-hidden">
       <header className="h-14 flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-6 z-10">
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
@@ -20,23 +36,13 @@ export default function DemoPage() {
              <span className="hidden sm:inline-block">KnowledgeHub AI</span>
           </div>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-[10px] sm:text-xs font-semibold uppercase tracking-wider border border-blue-200 shadow-sm">
-            Public Demo <span className="hidden sm:inline">· Read-Only</span>
+            Interactive Demo Sandbox
           </span>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/">
-            <Button variant="ghost" size="sm" className="h-8 text-xs text-slate-600 hidden sm:inline-flex">
+            <Button variant="ghost" size="sm" className="h-8 text-xs text-slate-600">
               Back to Website
-            </Button>
-          </Link>
-          <Link href="/login">
-            <Button variant="outline" size="sm" className="h-8 text-xs bg-white shadow-sm hover:bg-slate-50 text-slate-700">
-              Login
-            </Button>
-          </Link>
-          <Link href="/register">
-            <Button size="sm" className="h-8 text-xs shadow-sm">
-              Start Free Trial
             </Button>
           </Link>
         </div>
@@ -51,54 +57,64 @@ export default function DemoPage() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="max-w-2xl w-full text-center space-y-6 z-10"
+          className="max-w-3xl w-full text-center space-y-8 z-10"
         >
-          <div className="mx-auto w-14 h-14 bg-white text-primary-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-slate-200/60">
-            <BrainCircuit className="w-7 h-7" />
+          <div className="space-y-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+              KnowledgeHub AI <br/> Interactive Demo
+            </h1>
+            <p className="text-slate-500 text-base max-w-xl mx-auto leading-relaxed">
+              Choose how you want to explore the platform. Changes in this sandbox are isolated to a secure demo environment.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Interactive Product Demo</h1>
-          <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-            This is a demonstration of the KnowledgeHub AI interface. In a production environment, this chat connects securely to your authorized organizational documents.
-          </p>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8 text-left w-full max-w-xl mx-auto">
-            {[
-              "What is our annual leave policy?",
-              "What is the hardware reimbursement process?",
-              "Where can I find the compliance manual?",
-              "How do I request a new laptop?"
-            ].map((q, i) => (
-              <motion.div 
-                key={i}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                className="p-3.5 bg-white border border-slate-200/80 rounded-xl hover:border-primary-300 hover:shadow-sm cursor-pointer transition-all shadow-sm group"
-                onClick={() => setQuery(q)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto pt-6">
+            <motion.div 
+              whileHover={{ y: -4 }}
+              className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm text-left flex flex-col items-start gap-4 cursor-pointer hover:border-primary-300 hover:shadow-md transition-all"
+              onClick={() => handleDemoLogin('ADMIN')}
+            >
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Demo Admin</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  Experience the full knowledge management suite. Upload documents, manage permissions, and query the AI.
+                </p>
+              </div>
+              <Button 
+                className="mt-auto w-full" 
+                disabled={isLoading !== null}
               >
-                <p className="text-xs font-medium text-slate-600 group-hover:text-primary-700 transition-colors">{q}</p>
-              </motion.div>
-            ))}
+                {isLoading === 'ADMIN' ? 'Entering...' : 'Enter as Admin'}
+              </Button>
+            </motion.div>
+
+            <motion.div 
+              whileHover={{ y: -4 }}
+              className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm text-left flex flex-col items-start gap-4 cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all"
+              onClick={() => handleDemoLogin('EMPLOYEE')}
+            >
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Demo Employee</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  Experience the end-user portal. Query the AI chat and see strict document access controls in action.
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                className="mt-auto w-full border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                disabled={isLoading !== null}
+              >
+                {isLoading === 'EMPLOYEE' ? 'Entering...' : 'Enter as Employee'}
+              </Button>
+            </motion.div>
           </div>
         </motion.div>
-      </div>
-      
-      <div className="p-4 sm:p-6 bg-gradient-to-t from-white via-white to-transparent pt-10 z-20">
-        <div className="max-w-3xl mx-auto relative group">
-          <Input 
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full h-14 pl-6 pr-14 text-sm rounded-full shadow-lg border-slate-200 focus-visible:ring-primary-500 bg-white transition-all" 
-            placeholder="This is a demo. Backend AI processing is disabled..."
-          />
-          <Button size="icon" className="absolute right-2 top-2 h-10 w-10 rounded-full bg-primary-600 hover:bg-primary-700 shadow-sm transition-transform hover:scale-105 active:scale-95 disabled:opacity-50">
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="text-center mt-3">
-          <span className="text-[10px] text-slate-400 flex items-center justify-center gap-1.5">
-            <Database className="w-3 h-3" /> Phase 3 functionality (RAG retrieval) is not active in this demo.
-          </span>
-        </div>
       </div>
     </PageTransition>
   )

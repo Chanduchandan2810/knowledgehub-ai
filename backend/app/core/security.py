@@ -1,15 +1,21 @@
 import jwt
-from fastapi import HTTPException, Security, status
+from fastapi import HTTPException, Security, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
 from supabase import create_client, Client
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 # Initialize a single Supabase client for the backend
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
+def verify_token(request: Request, credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
+    if request.url.path.startswith("/api/v1/demo/"):
+        return {"demo": True}
+        
+    if not credentials:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        
     token = credentials.credentials
     try:
         # Securely verify token and get user from Supabase Auth Server directly with retry for transient pool disconnects
