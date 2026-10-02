@@ -10,6 +10,10 @@ class DocumentStatus(str, enum.Enum):
     PROCESSED = "PROCESSED"
     FAILED = "FAILED"
 
+class AccessScope(str, enum.Enum):
+    ORGANIZATION = "ORGANIZATION"
+    RESTRICTED = "RESTRICTED"
+
 class Document(Base):
     __tablename__ = "documents"
 
@@ -21,6 +25,7 @@ class Document(Base):
     mime_type = Column(String, nullable=False)
     file_size = Column(Integer, nullable=False)
     status = Column(String, default=DocumentStatus.UPLOADED.value, nullable=False)
+    access_scope = Column(String, default=AccessScope.ORGANIZATION.value, nullable=False, server_default=AccessScope.ORGANIZATION.value)
     
     # Phase 4 Document Processing Fields
     processing_started_at = Column(DateTime(timezone=True), nullable=True)
@@ -37,3 +42,4 @@ class Document(Base):
     __table_args__ = (
         UniqueConstraint("id", "organization_id", name="uq_documents_id_org"),
     )
+

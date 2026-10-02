@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, List
-from app.models.document import DocumentStatus
+from app.models.document import DocumentStatus, AccessScope
 
 class DocumentBase(BaseModel):
     filename: str
@@ -19,6 +19,7 @@ class DocumentResponse(DocumentBase):
     organization_id: UUID
     uploaded_by: Optional[UUID]
     status: DocumentStatus
+    access_scope: AccessScope = AccessScope.ORGANIZATION
     
     # Phase 4 fields
     processing_started_at: Optional[datetime] = None
@@ -32,6 +33,9 @@ class DocumentResponse(DocumentBase):
     updated_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+
+class DocumentScopeUpdate(BaseModel):
+    access_scope: AccessScope
 
 class DocumentPermissionBase(BaseModel):
     employee_id: UUID

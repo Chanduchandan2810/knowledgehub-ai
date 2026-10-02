@@ -1,7 +1,7 @@
 import uuid
 import logging
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import get_current_user_context, require_admin_role, UserContext
 from app.db.session import get_db
-from app.models.document import Document, DocumentStatus
+from app.models.document import Document, DocumentStatus, AccessScope
 from app.models.document_permission import DocumentPermission
 from app.models.admin import Admin
 from app.models.employee import Employee
@@ -17,7 +17,8 @@ from app.schemas.document import (
     DocumentResponse, 
     DocumentPermissionResponse, 
     DocumentPermissionCreate,
-    DocumentReprocessResponse
+    DocumentReprocessResponse,
+    DocumentScopeUpdate
 )
 from app.core.storage import upload_document_to_storage, delete_document_from_storage
 from app.services.documents.processor import process_document
@@ -32,6 +33,7 @@ ALLOWED_MIME_TYPES = ["application/pdf", "text/plain"]
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    access_scope: AccessScope = Form(AccessScope.ORGANIZATION),
     ctx: UserContext = Depends(require_admin_role),
     db: AsyncSession = Depends(get_db)
 ):
@@ -85,11 +87,22 @@ async def upload_document(
         storage_path=storage_path,
         mime_type=mime_type,
         file_size=file_size,
-        status=DocumentStatus.UPLOADED.value
+        status=DocumentStatus.UPLOADED.value,
+        access_scope=access_scope.value
     )
     db.add(new_doc)
     try:
         await db.flush()
+        
+        if access_scope == AccessScope.ORGANIZATION:
+            emps_query = select(Employee.id).where(Employee.organization_id == ctx.organization_id)
+            emp_ids = (await db.execute(emps_query)).scalars().all()
+            for emp_id in emp_ids:
+                db.add(DocumentPermission(
+                    document_id=doc_id,
+                    employee_id=emp_id
+                ))
+
         # Capture the database-generated values before committing
         from app.schemas.document import DocumentResponse
         response = DocumentResponse.model_validate(new_doc)
@@ -291,3 +304,24 @@ async def reprocess_document(
         document_id=doc.id,
         status=DocumentStatus.PROCESSING
     )
+
+@router.patch("/{document_id}/scope", response_model=DocumentResponse)
+async def update_document_scope(
+    document_id: uuid.UUID,
+    data: DocumentScopeUpdate,
+    ctx: UserContext = Depends(require_admin_role),
+    db: AsyncSession = Depends(get_db)
+):
+    query = select(Document).where(
+        Document.id == document_id, 
+        Document.organization_id == ctx.organization_id
+    )
+    doc = (await db.execute(query)).scalar_one_or_none()
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    doc.access_scope = data.access_scope.value
+    await db.commit()
+    await db.refresh(doc)
+    return doc

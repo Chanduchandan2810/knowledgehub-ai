@@ -6,6 +6,8 @@ from sqlalchemy import select
 from app.db.session import get_db
 from app.api.deps import require_admin_role, UserContext
 from app.models.employee import Employee
+from app.models.document import Document, AccessScope
+from app.models.document_permission import DocumentPermission
 from pydantic import BaseModel
 from app.core.config import settings
 from supabase import create_client, Client
@@ -80,6 +82,20 @@ async def create_employee(
         email=emp_in.email
     )
     db.add(new_emp)
+    await db.flush()
+    
+    # Grant access to all ORGANIZATION scope documents in this org
+    docs_query = select(Document.id).where(
+        Document.organization_id == ctx.organization_id,
+        Document.access_scope == AccessScope.ORGANIZATION.value
+    )
+    org_doc_ids = (await db.execute(docs_query)).scalars().all()
+    for doc_id in org_doc_ids:
+        db.add(DocumentPermission(
+            document_id=doc_id,
+            employee_id=new_emp.id
+        ))
+
     await db.commit()
     await db.refresh(new_emp)
     
