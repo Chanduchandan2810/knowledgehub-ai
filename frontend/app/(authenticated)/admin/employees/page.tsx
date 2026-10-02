@@ -21,6 +21,7 @@ export default function AdminEmployees() {
   const [isAdding, setisAdding] = useState(false)
   const [employeeEmail, setemployeeEmail] = useState('')
   const [employeeName, setemployeeName] = useState('')
+  const [currentUserEmail, setCurrentUserEmail] = useState('')
   const [addResult, setaddResult] = useState<{success?: boolean, message?: string, link?: string} | null>(null)
   const supabase = createClient()
   const isValidUUID = (uuid: string) => {
@@ -66,9 +67,22 @@ export default function AdminEmployees() {
     if (!session) return
 
     try {
-      const res = await fetch('/api/v1/employees', {
-        headers: { 'Authorization': `Bearer ${session.access_token}`, 'X-Organization-Id': await getActiveOrganizationId(session) }
-      })
+      const orgId = await getActiveOrganizationId(session)
+      
+      const [res, meRes] = await Promise.all([
+        fetch('/api/v1/employees', {
+          headers: { 'Authorization': `Bearer ${session.access_token}`, 'X-Organization-Id': orgId }
+        }),
+        fetch('/api/v1/auth/me', {
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        })
+      ])
+      
+      if (meRes.ok) {
+        const me = await meRes.json()
+        setCurrentUserEmail(me.email)
+      }
+
       if (res.ok) {
         setEmployees(await res.json())
       }
@@ -148,12 +162,12 @@ export default function AdminEmployees() {
               <div className="pt-6 relative group">
                 <Button 
                   type="submit" 
-                  disabled={isAdding || userContext?.email === 'admin@demo.knowledgehub.local'} 
+                  disabled={isAdding || currentUserEmail === 'admin@demo.knowledgehub.local'} 
                   className="shadow-sm w-full"
                 >
                   <UserPlus className="mr-2 h-4 w-4" /> {isAdding ? 'Adding...' : 'Create Employee'}
                 </Button>
-                {userContext?.email === 'admin@demo.knowledgehub.local' && (
+                {currentUserEmail === 'admin@demo.knowledgehub.local' && (
                   <div className="absolute top-full left-0 mt-2 p-2 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                     Employee management is disabled in the public demo.
                   </div>

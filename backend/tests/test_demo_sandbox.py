@@ -13,7 +13,7 @@ async def test_demo_unauthenticated_on_normal_routes():
 async def test_demo_admin_session_works():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # Start demo
-        start_res = await client.post("/api/v1/demo/start", json={"role": "ADMIN"})
+        start_res = await client.post("/api/v1/auth/demo/start", json={"role": "ADMIN"})
         assert start_res.status_code == 200
         token = start_res.json()["access_token"]
         
@@ -25,7 +25,7 @@ async def test_demo_admin_session_works():
 
 async def test_demo_employee_session_works():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        start_res = await client.post("/api/v1/demo/start", json={"role": "EMPLOYEE"})
+        start_res = await client.post("/api/v1/auth/demo/start", json={"role": "EMPLOYEE"})
         assert start_res.status_code == 200
         token = start_res.json()["access_token"]
         
@@ -36,7 +36,7 @@ async def test_demo_employee_session_works():
 
 async def test_demo_employee_denied_admin_routes():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        start_res = await client.post("/api/v1/demo/start", json={"role": "EMPLOYEE"})
+        start_res = await client.post("/api/v1/auth/demo/start", json={"role": "EMPLOYEE"})
         token = start_res.json()["access_token"]
         
         response = await client.get("/api/v1/employees", headers={"Authorization": f"Bearer {token}"})
@@ -44,7 +44,7 @@ async def test_demo_employee_denied_admin_routes():
 
 async def test_modified_demo_token_rejected():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        start_res = await client.post("/api/v1/demo/start", json={"role": "EMPLOYEE"})
+        start_res = await client.post("/api/v1/auth/demo/start", json={"role": "EMPLOYEE"})
         token = start_res.json()["access_token"]
         
         # Tamper with token
