@@ -12,12 +12,14 @@ import Link from 'next/link'
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState('org')
   const [org, setOrg] = useState<any>(null)
+  const [currentUserEmail, setCurrentUserEmail] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
     async function loadOrg() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
+      if (session.user?.email) setCurrentUserEmail(session.user.email)
 
       // Read org ID from cookie
       const match = document.cookie.match(new RegExp('(^| )khub_org_id=([^;]+)'))
@@ -119,11 +121,17 @@ export default function AdminSettings() {
                         <p className="text-xs text-slate-500">Change your administrative account password.</p>
                       </div>
                     </div>
-                    <Link href="/admin/change-password">
-                      <Button variant="outline" className="w-full sm:w-auto text-sm font-medium">
-                        Change Password
+                    {currentUserEmail !== 'admin@demo.knowledgehub.local' ? (
+                      <Link href="/admin/change-password">
+                        <Button variant="outline" className="w-full sm:w-auto text-sm font-medium">
+                          Change Password
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button variant="outline" disabled className="w-full sm:w-auto text-sm font-medium">
+                        Disabled in Demo
                       </Button>
-                    </Link>
+                    )}
                   </div>
                 </CardContent>
               </Card>

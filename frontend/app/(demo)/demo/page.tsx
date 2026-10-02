@@ -14,21 +14,30 @@ export default function DemoPage() {
   const [isLoading, setIsLoading] = useState<string | null>(null)
 
   const handleDemoLogin = async (role: 'ADMIN' | 'EMPLOYEE') => {
+    console.log('handleDemoLogin called with role:', role)
     setIsLoading(role)
     try {
+      console.log('Sending fetch request to /api/v1/auth/demo/start...')
       const res = await fetch('/api/v1/auth/demo/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role })
       })
+      console.log('Fetch response status:', res.status)
       if (!res.ok) throw new Error('Failed to start demo')
       const tokenData = await res.json()
       
+      console.log('Setting Supabase session...')
       const supabase = createClient()
-      await supabase.auth.setSession({
+      const { data, error } = await supabase.auth.setSession({
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token
       })
+      if (error) {
+        console.error("Supabase auth error:", error)
+        throw error
+      }
+      console.log('Session set correctly, pushing router...')
       
       if (role === 'ADMIN') {
         router.push('/admin/dashboard')
@@ -36,7 +45,7 @@ export default function DemoPage() {
         router.push('/employee/chat')
       }
     } catch (err) {
-      console.error(err)
+      console.error("Error in handleDemoLogin:", err)
       setIsLoading(null)
     }
   }

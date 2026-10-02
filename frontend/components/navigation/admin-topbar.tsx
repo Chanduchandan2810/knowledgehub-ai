@@ -9,6 +9,7 @@ import { createClient } from '@/utils/supabase/client'
 export function AdminTopbar({ title, description }: { title: string, description?: string }) {
   const [orgName, setOrgName] = useState<string>('')
   const [adminName, setAdminName] = useState<string>('')
+  const [userEmail, setUserEmail] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -16,23 +17,21 @@ export function AdminTopbar({ title, description }: { title: string, description
     const fetchData = async () => {
       const match = document.cookie.match(/(^|;)\s*khub_org_id\s*=\s*([^;]+)/);
       const orgId = match ? (match.pop() as string) : '';
-      if (!orgId) {
-        setOrgName('Organization info unavailable')
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
         setLoading(false)
         return
       }
 
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-
       try {
         const [orgRes, authRes] = await Promise.all([
-          fetch('/api/v1/organizations/current', {
+          orgId ? fetch('/api/v1/organizations/current', {
             headers: {
               'Authorization': `Bearer ${session.access_token}`,
               'X-Organization-Id': orgId
             }
-          }),
+          }) : Promise.resolve(null),
           fetch('/api/v1/auth/me', {
             headers: {
               'Authorization': `Bearer ${session.access_token}`
@@ -40,7 +39,7 @@ export function AdminTopbar({ title, description }: { title: string, description
           })
         ])
 
-        if (orgRes.ok) {
+        if (orgRes && orgRes.ok) {
           const data = await orgRes.json()
           setOrgName(data.name)
         } else {
@@ -49,7 +48,9 @@ export function AdminTopbar({ title, description }: { title: string, description
 
         if (authRes.ok) {
           const authData = await authRes.json()
-          setAdminName(authData.full_name)
+          const isDemo = session.user?.email === 'admin@demo.knowledgehub.local'
+          setAdminName(isDemo ? 'Demo Admin' : authData.full_name)
+          setUserEmail(session.user?.email || authData.email)
         }
       } catch (err) {
         setOrgName('Organization info unavailable')
@@ -78,7 +79,9 @@ export function AdminTopbar({ title, description }: { title: string, description
             <p className="text-sm font-bold text-slate-900 max-w-[160px] truncate">
               {loading ? 'Loading...' : (adminName || 'Admin')}
             </p>
-            <p className="text-[10px] font-bold text-purple-600 tracking-wider">ADMIN</p>
+            <p className="text-[10px] font-bold text-purple-600 tracking-wider">
+              ADMIN
+            </p>
           </div>
         </div>
         

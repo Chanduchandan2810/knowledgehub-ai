@@ -114,11 +114,17 @@ export default function EmployeeProfile() {
                   </div>
                 </div>
                 <div className="w-full sm:w-auto">
-                  <Link href="/employee/change-password">
-                    <Button variant="outline" className="w-full sm:w-auto text-sm font-medium">
-                      Change Password
+                  {user?.email !== 'employee@demo.knowledgehub.local' ? (
+                    <Link href="/employee/change-password">
+                      <Button variant="outline" className="w-full sm:w-auto text-sm font-medium">
+                        Change Password
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button variant="outline" disabled className="w-full sm:w-auto text-sm font-medium">
+                      Disabled in Demo
                     </Button>
-                  </Link>
+                  )}
                 </div>
               </div>
 

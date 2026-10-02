@@ -59,7 +59,14 @@ export default function AdminEmployees() {
   }
 
   useEffect(() => {
-    fetchEmployees()
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user?.email) {
+        setCurrentUserEmail(session.user.email)
+      }
+      fetchEmployees()
+    }
+    init()
   }, [])
 
   const fetchEmployees = async () => {
@@ -79,8 +86,7 @@ export default function AdminEmployees() {
       ])
       
       if (meRes.ok) {
-        const me = await meRes.json()
-        setCurrentUserEmail(me.email)
+        // me.email is not used to override session email anymore
       }
 
       if (res.ok) {
