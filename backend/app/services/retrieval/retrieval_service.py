@@ -55,17 +55,15 @@ async def retrieve_chunks(
 
     # 4. Filter by threshold and build response
     results = []
-    has_relevant_results = False
 
     for chunk, doc, distance in rows:
-        # Cosine distance: smaller is better (0 is exact match, 2 is exact opposite)
+        # Check threshold (smaller distance is better)
+        if distance > settings.RETRIEVAL_THRESHOLD_COSINE_DISTANCE:
+            continue
+            
         # We convert to a similarity score (1 - distance) for UI convenience
         similarity = 1.0 - distance
         
-        # Check threshold
-        if distance <= settings.RETRIEVAL_THRESHOLD_COSINE_DISTANCE:
-            has_relevant_results = True
-            
         results.append(
             RetrievedChunk(
                 chunk_id=chunk.id,
@@ -80,7 +78,8 @@ async def retrieve_chunks(
             )
         )
         
-    # If no chunk passed the threshold, we return the results but flag it as not genuinely relevant
+    has_relevant_results = len(results) > 0
+
     return RetrievalResponse(
         query=clean_question,
         results=results,
