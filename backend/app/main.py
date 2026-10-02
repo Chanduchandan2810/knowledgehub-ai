@@ -37,6 +37,38 @@ async def seed_demo_sandbox():
         from app.models.admin import Admin
         from app.models.employee import Employee
         from sqlalchemy import select
+        from supabase import create_client
+        
+        # 1. Ensure Auth users exist using Admin API
+        admin_supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+        demo_admin_email = "admin@demo.knowledgehub.local"
+        demo_emp_email = "employee@demo.knowledgehub.local"
+        
+        admin_auth_user_id = None
+        emp_auth_user_id = None
+        
+        users_resp = admin_supabase.auth.admin.list_users()
+        for u in users_resp:
+            if u.email == demo_admin_email:
+                admin_auth_user_id = u.id
+            elif u.email == demo_emp_email:
+                emp_auth_user_id = u.id
+                
+        if not admin_auth_user_id:
+            res = admin_supabase.auth.admin.create_user({
+                "email": demo_admin_email,
+                "password": "SecureDemoPassword123!",
+                "email_confirm": True
+            })
+            admin_auth_user_id = res.user.id
+            
+        if not emp_auth_user_id:
+            res = admin_supabase.auth.admin.create_user({
+                "email": demo_emp_email,
+                "password": "SecureDemoPassword123!",
+                "email_confirm": True
+            })
+            emp_auth_user_id = res.user.id
         
         async with AsyncSessionLocal() as session:
             # Upsert Org
@@ -45,6 +77,7 @@ async def seed_demo_sandbox():
             if not org:
                 org = Organization(id=settings.DEMO_ORG_ID, name="Demo Environment")
                 session.add(org)
+                await session.flush()
                 
             # Upsert Admin
             admin_res = await session.execute(select(Admin).where(Admin.id == settings.DEMO_ADMIN_ID))
@@ -52,12 +85,14 @@ async def seed_demo_sandbox():
             if not admin:
                 admin = Admin(
                     id=settings.DEMO_ADMIN_ID,
-                    auth_user_id=settings.DEMO_ADMIN_ID,
+                    auth_user_id=admin_auth_user_id,
                     organization_id=settings.DEMO_ORG_ID,
-                    email="admin@demo.knowledgehub.local",
+                    email=demo_admin_email,
                     full_name="Demo Admin"
                 )
                 session.add(admin)
+            elif str(admin.auth_user_id) != admin_auth_user_id:
+                admin.auth_user_id = admin_auth_user_id
                 
             # Upsert Employee
             emp_res = await session.execute(select(Employee).where(Employee.id == settings.DEMO_EMPLOYEE_ID))
@@ -65,12 +100,14 @@ async def seed_demo_sandbox():
             if not emp:
                 emp = Employee(
                     id=settings.DEMO_EMPLOYEE_ID,
-                    auth_user_id=settings.DEMO_EMPLOYEE_ID,
+                    auth_user_id=emp_auth_user_id,
                     organization_id=settings.DEMO_ORG_ID,
-                    email="employee@demo.knowledgehub.local",
+                    email=demo_emp_email,
                     full_name="Demo Employee"
                 )
                 session.add(emp)
+            elif str(emp.auth_user_id) != emp_auth_user_id:
+                emp.auth_user_id = emp_auth_user_id
                 
             await session.commit()
     except Exception as e:
@@ -117,14 +154,6 @@ app.include_router(documents.router, prefix="/api/v1/documents", tags=["document
 
 from app.api.v1 import retrieval
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
-
-# Demo Sandbox Isolated Routes
-# Mounted separately so Next.js can proxy /api/v1/demo/... securely bypassing normal auth
-app.include_router(organizations.router, prefix="/api/v1/demo/organizations", tags=["demo-organizations"])
-app.include_router(employees.router, prefix="/api/v1/demo/employees", tags=["demo-employees"])
-app.include_router(documents.router, prefix="/api/v1/demo/documents", tags=["demo-documents"])
-app.include_router(retrieval.router, prefix="/api/v1/demo/retrieval", tags=["demo-retrieval"])
-app.include_router(auth.router, prefix="/api/v1/demo/auth", tags=["demo-auth"])
 
 from fastapi.responses import JSONResponse
 import traceback

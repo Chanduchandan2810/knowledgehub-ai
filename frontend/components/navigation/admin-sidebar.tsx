@@ -28,6 +28,7 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const [orgName, setOrgName] = useState<string>('')
   const [adminName, setAdminName] = useState<string>('')
+  const [userEmail, setUserEmail] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -67,6 +68,7 @@ export function AdminSidebar() {
         if (authRes.ok) {
           const authData = await authRes.json()
           setAdminName(authData.full_name)
+          setUserEmail(authData.email)
         }
       } catch (err) {
         setOrgName('Organization info unavailable')
@@ -122,11 +124,10 @@ export function AdminSidebar() {
       </div>
       
       <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-2">
-        {typeof document !== 'undefined' && document.cookie.includes('demo_role=') && (
+        {userEmail === 'admin@demo.knowledgehub.local' && (
           <button 
-            onClick={() => {
-              document.cookie = 'demo_role=; path=/; max-age=0'
-              document.cookie = 'khub_role=; path=/; max-age=0'
+            onClick={async () => {
+              await supabase.auth.signOut()
               window.location.href = '/demo'
             }}
             className="w-full flex items-center justify-center px-3 py-2 text-xs font-semibold rounded-md border border-amber-200 bg-amber-50 text-amber-700 shadow-sm hover:bg-amber-100 transition-colors"

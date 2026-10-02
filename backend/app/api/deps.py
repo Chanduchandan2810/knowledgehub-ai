@@ -24,37 +24,6 @@ async def get_current_user_context(
     x_organization_id: uuid.UUID = Header(None, description="The ID of the organization to access"),
     db: AsyncSession = Depends(get_db)
 ) -> UserContext:
-    if payload.get("demo") is True:
-        demo_role = request.cookies.get("demo_role")
-        if not demo_role:
-            raise HTTPException(status_code=401, detail="Demo role cookie missing")
-        
-        # Determine the demo user ID and info
-        if demo_role == "ADMIN":
-            ctx = UserContext(
-                user_id=settings.DEMO_ADMIN_ID,
-                auth_user_id=settings.DEMO_ADMIN_ID,
-                organization_id=settings.DEMO_ORG_ID,
-                role="ADMIN",
-                email="admin@demo.knowledgehub.local",
-                full_name="Demo Admin"
-            )
-        elif demo_role == "EMPLOYEE":
-            ctx = UserContext(
-                user_id=settings.DEMO_EMPLOYEE_ID,
-                auth_user_id=settings.DEMO_EMPLOYEE_ID,
-                organization_id=settings.DEMO_ORG_ID,
-                role="EMPLOYEE",
-                email="employee@demo.knowledgehub.local",
-                full_name="Demo Employee"
-            )
-        else:
-            raise HTTPException(status_code=400, detail="Invalid demo role")
-            
-        await db.execute(text(f"SET LOCAL role = 'authenticated';"))
-        await db.execute(text(f"SET LOCAL app.current_tenant = '{ctx.organization_id}';"))
-        return ctx
-
     auth_user_id = payload.get("sub")
     if not auth_user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")

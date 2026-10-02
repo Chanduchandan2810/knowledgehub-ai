@@ -11,6 +11,7 @@ export function EmployeeSidebar() {
   const pathname = usePathname()
   const [orgName, setOrgName] = useState<string>('')
   const [empName, setEmpName] = useState<string>('')
+  const [userEmail, setUserEmail] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -50,6 +51,7 @@ export function EmployeeSidebar() {
         if (userRes.ok) {
           const userData = await userRes.json()
           setEmpName(userData.full_name || userData.email)
+          setUserEmail(userData.email)
         }
       } catch (err) {
         setOrgName('Organization info unavailable')
@@ -97,11 +99,10 @@ export function EmployeeSidebar() {
       </div>
 
       <div className="p-4 border-t border-slate-200/60 bg-white space-y-2">
-        {typeof document !== 'undefined' && document.cookie.includes('demo_role=') && (
+        {userEmail === 'employee@demo.knowledgehub.local' && (
           <button 
-            onClick={() => {
-              document.cookie = 'demo_role=; path=/; max-age=0'
-              document.cookie = 'khub_role=; path=/; max-age=0'
+            onClick={async () => {
+              await supabase.auth.signOut()
               window.location.href = '/demo'
             }}
             className="w-full flex items-center justify-center px-3 py-2 text-xs font-semibold rounded-md border border-amber-200 bg-amber-50 text-amber-700 shadow-sm hover:bg-amber-100 transition-colors"

@@ -24,25 +24,5 @@ export async function createClient() {
     }
   )
 
-  const isDemo = cookieStore.get('demo_role')?.value
-  if (isDemo) {
-    client.auth.getUser = async () => ({
-      data: { user: { id: 'demo-user', aud: 'authenticated', role: 'authenticated', email: 'demo@knowledgehub.local', app_metadata: {}, user_metadata: {}, created_at: '', updated_at: '' } },
-      error: null
-    })
-    client.auth.getSession = async () => ({
-      data: {
-        session: {
-          access_token: 'demo-bypass-token',
-          token_type: 'bearer',
-          expires_in: 3600,
-          refresh_token: 'demo-refresh',
-          user: { id: 'demo-user', aud: 'authenticated', role: 'authenticated', email: 'demo@knowledgehub.local', app_metadata: {}, user_metadata: {}, created_at: '', updated_at: '' }
-        }
-      },
-      error: null
-    })
-  }
-
   return client
 }

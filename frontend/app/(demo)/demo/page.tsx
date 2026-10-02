@@ -7,24 +7,38 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { createClient } from '@/utils/supabase/client'
+
 export default function DemoPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState<string | null>(null)
 
-  const handleDemoLogin = (role: 'ADMIN' | 'EMPLOYEE') => {
+  const handleDemoLogin = async (role: 'ADMIN' | 'EMPLOYEE') => {
     setIsLoading(role)
-    // Set demo cookies
-    document.cookie = `demo_role=${role}; path=/; max-age=3600`
-    document.cookie = `khub_role=${role}; path=/; max-age=3600`
-    
-    // Slight delay for UX
-    setTimeout(() => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/v1/demo/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role })
+      })
+      if (!res.ok) throw new Error('Failed to start demo')
+      const tokenData = await res.json()
+      
+      const supabase = createClient()
+      await supabase.auth.setSession({
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token
+      })
+      
       if (role === 'ADMIN') {
         router.push('/admin/dashboard')
       } else {
         router.push('/employee/chat')
       }
-    }, 600)
+    } catch (err) {
+      console.error(err)
+      setIsLoading(null)
+    }
   }
 
   return (

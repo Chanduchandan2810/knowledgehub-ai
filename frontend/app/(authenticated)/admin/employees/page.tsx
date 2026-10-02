@@ -148,12 +148,12 @@ export default function AdminEmployees() {
               <div className="pt-6 relative group">
                 <Button 
                   type="submit" 
-                  disabled={isAdding || (typeof document !== 'undefined' && document.cookie.includes('demo_role='))} 
+                  disabled={isAdding || userContext?.email === 'admin@demo.knowledgehub.local'} 
                   className="shadow-sm w-full"
                 >
                   <UserPlus className="mr-2 h-4 w-4" /> {isAdding ? 'Adding...' : 'Create Employee'}
                 </Button>
-                {typeof document !== 'undefined' && document.cookie.includes('demo_role=') && (
+                {userContext?.email === 'admin@demo.knowledgehub.local' && (
                   <div className="absolute top-full left-0 mt-2 p-2 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                     Employee management is disabled in the public demo.
                   </div>

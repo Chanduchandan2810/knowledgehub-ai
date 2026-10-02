@@ -10,9 +10,6 @@ security = HTTPBearer(auto_error=False)
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 def verify_token(request: Request, credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
-    if request.url.path.startswith("/api/v1/demo/"):
-        return {"demo": True}
-        
     if not credentials:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
         
