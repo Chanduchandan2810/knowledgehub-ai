@@ -66,19 +66,6 @@ export function RetrievalChat({ role }: { role: 'Admin' | 'Employee' }) {
 
   return (
     <PageTransition className="flex flex-col h-full bg-slate-50 relative overflow-hidden">
-      
-      <header className="h-14 flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-6 z-10">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-slate-900 text-sm">Semantic Retrieval ({role})</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-100">
-            <ShieldCheck className="w-3.5 h-3.5" /> Secured Workspace
-          </span>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600"><HelpCircle className="w-4 h-4" /></Button>
-        </div>
-      </header>
-
       <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col relative">
         {(!retrievedData && !isSearching) ? (
           <div className="flex-1 flex flex-col items-center justify-center">

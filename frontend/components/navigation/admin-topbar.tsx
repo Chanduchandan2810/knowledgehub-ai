@@ -6,9 +6,9 @@ import { LogoutButton } from '../shared/logout-button'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 
-export function AdminTopbar({ title, description }: { title: string, description?: string }) {
+export function AdminTopbar({ title, description, role = "ADMIN" }: { title: string, description?: string, role?: "ADMIN" | "EMPLOYEE" }) {
   const [orgName, setOrgName] = useState<string>('')
-  const [adminName, setAdminName] = useState<string>('')
+  const [userName, setUserName] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -48,8 +48,14 @@ export function AdminTopbar({ title, description }: { title: string, description
 
         if (authRes.ok) {
           const authData = await authRes.json()
-          const isDemo = session.user?.email === 'admin@demo.knowledgehub.local'
-          setAdminName(isDemo ? 'Demo Admin' : authData.full_name)
+          const isDemoAdmin = session.user?.email === 'admin@demo.knowledgehub.local'
+          const isDemoEmployee = session.user?.email === 'employee@demo.knowledgehub.local'
+          
+          let display = authData.full_name
+          if (isDemoAdmin) display = 'Demo Admin'
+          else if (isDemoEmployee) display = 'Demo Employee'
+          
+          setUserName(display)
           setUserEmail(session.user?.email || authData.email)
         }
       } catch (err) {
@@ -77,10 +83,10 @@ export function AdminTopbar({ title, description }: { title: string, description
         <div className="hidden lg:flex items-center mr-4 border-r border-slate-200 pr-4">
           <div className="text-right">
             <p className="text-sm font-bold text-slate-900 max-w-[160px] truncate">
-              {loading ? 'Loading...' : (adminName || 'Admin')}
+              {loading ? 'Loading...' : (userName || 'User')}
             </p>
-            <p className="text-[10px] font-bold text-purple-600 tracking-wider">
-              ADMIN
+            <p className={`text-[10px] font-bold tracking-wider ${role === 'ADMIN' ? 'text-purple-600' : 'text-blue-600'}`}>
+              {role}
             </p>
           </div>
         </div>
@@ -95,8 +101,12 @@ export function AdminTopbar({ title, description }: { title: string, description
             <Bell className="h-4 w-4" />
           </Button>
           <LogoutButton />
-          <div className="ml-2 w-8 h-8 rounded-full bg-purple-100 text-purple-700 border border-purple-200 flex items-center justify-center text-xs font-bold cursor-default shadow-sm hidden sm:flex">
-            {loading ? '...' : (adminName ? adminName.charAt(0).toUpperCase() : 'A')}
+          <div className={`ml-2 w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold cursor-default shadow-sm hidden sm:flex ${
+            role === 'ADMIN' 
+              ? 'bg-purple-100 text-purple-700 border-purple-200' 
+              : 'bg-blue-100 text-blue-700 border-blue-200'
+          }`}>
+            {loading ? '...' : (userName ? userName.charAt(0).toUpperCase() : (role === 'ADMIN' ? 'A' : 'E'))}
           </div>
         </div>
       </div>
