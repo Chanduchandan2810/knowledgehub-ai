@@ -37,6 +37,12 @@ export default function DemoPage() {
         console.error("Supabase auth error:", error)
         throw error
       }
+      
+      // Set the necessary cookies for middleware routing
+      document.cookie = `khub_role=${role}; path=/; max-age=86400; SameSite=Lax`
+      // For demo, we can just set a dummy org id if needed, or let the backend handle it.
+      document.cookie = `khub_org_id=demo-org-id; path=/; max-age=86400; SameSite=Lax`
+      
       console.log('Session set correctly, pushing router...')
       
       if (role === 'ADMIN') {
