@@ -45,12 +45,7 @@ STRICT RULES:
 You MUST format your response EXACTLY as follows:
 Write your answer in plain text.
 At the very end of your response, on a new line, output EXACTLY the word "___CITATIONS___" followed by a comma-separated list of chunk IDs used.
-Example:
-This is the answer based on documents.
-___CITATIONS___ chunk-id-1, chunk-id-2
 
-If no documents were used, output:
-___CITATIONS___
 """
 
 NO_CONTEXT_MESSAGE = "I couldn't find enough information in the available documents to answer that question."
