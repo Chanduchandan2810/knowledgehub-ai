@@ -55,4 +55,42 @@ class LLMService:
                 "details": f"Unexpected error during health check: {str(e)}"
             }
 
+    async def generate_chat(self, system_prompt: str, user_prompt: str) -> str:
+        """
+        Generate a response using the native Ollama HTTP API.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                payload = {
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.1,  # Keep it grounded
+                        "top_p": 0.9,
+                    }
+                }
+                
+                res = await client.post(f"{self.base_url}/api/chat", json=payload)
+                
+                if res.status_code != 200:
+                    logger.error(f"Ollama API returned status {res.status_code}: {res.text}")
+                    raise RuntimeError("Failed to generate response from LLM service.")
+                
+                data = res.json()
+                message = data.get("message", {})
+                content = message.get("content", "")
+                
+                return content
+                
+        except httpx.RequestError as e:
+            logger.error(f"Connection error while calling Ollama: {str(e)}")
+            raise RuntimeError("LLM service is currently unreachable.")
+        except Exception as e:
+            logger.error(f"Unexpected error during LLM generation: {str(e)}")
+            raise RuntimeError("An unexpected error occurred during generation.")
+
 llm_service = LLMService()
