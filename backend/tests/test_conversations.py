@@ -19,10 +19,10 @@ async def test_create_and_list_conversations():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         token = await get_demo_token(client, "ADMIN")
         headers = {"Authorization": f"Bearer {token}"}
-        
+
         # Create conversation
         res = await client.post(
-            "/api/v1/conversations", 
+            "/api/v1/conversations",
             headers=headers,
             json={"title": "Test Title"}
         )
@@ -31,7 +31,7 @@ async def test_create_and_list_conversations():
         assert conv["title"] == "Test Title"
         assert "id" in conv
         conv_id = conv["id"]
-        
+
         # List conversations
         res2 = await client.get("/api/v1/conversations", headers=headers)
         assert res2.status_code == 200
@@ -43,10 +43,10 @@ async def test_get_my_conversation():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         token = await get_demo_token(client, "ADMIN")
         headers = {"Authorization": f"Bearer {token}"}
-        
+
         res = await client.post("/api/v1/conversations", headers=headers, json={"title": "Single Conv"})
         conv_id = res.json()["id"]
-        
+
         res2 = await client.get(f"/api/v1/conversations/{conv_id}", headers=headers)
         assert res2.status_code == 200
         assert res2.json()["id"] == conv_id
@@ -58,11 +58,11 @@ async def test_cross_user_isolation():
         admin_headers = {"Authorization": f"Bearer {admin_token}"}
         res = await client.post("/api/v1/conversations", headers=admin_headers, json={"title": "Admin Secret"})
         conv_id = res.json()["id"]
-        
+
         # Employee attempts to fetch it
         emp_token = await get_demo_token(client, "EMPLOYEE")
         emp_headers = {"Authorization": f"Bearer {emp_token}"}
-        
+
         res_fetch = await client.get(f"/api/v1/conversations/{conv_id}", headers=emp_headers)
         assert res_fetch.status_code == 404  # Not found for this user
 
@@ -74,17 +74,17 @@ async def test_send_message_and_multi_turn():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         token = await get_demo_token(client, "EMPLOYEE")
         headers = {"Authorization": f"Bearer {token}"}
-        
+
         # Create conv
         res = await client.post("/api/v1/conversations", headers=headers, json={"title": "New Conversation"})
         conv_id = res.json()["id"]
-        
+
         # Mock RAG generation so we don't hit LLM
         mock_rag_response = RAGResponse(answer="I am a mocked response.", retrieved_chunks=[])
-        
+
         with patch("app.services.chat.rag_service.rag_service.generate_answer", new_callable=AsyncMock) as mock_generate:
             mock_generate.return_value = mock_rag_response
-            
+
             # Send message
             msg_res = await client.post(
                 f"/api/v1/conversations/{conv_id}/messages",
@@ -95,11 +95,11 @@ async def test_send_message_and_multi_turn():
             data = msg_res.json()
             assert data["user_message"]["content"] == "What is the policy?"
             assert data["assistant_message"]["content"] == "I am a mocked response."
-            
+
             # Get updated title (deterministic first question logic)
             conv_res = await client.get(f"/api/v1/conversations/{conv_id}", headers=headers)
             assert conv_res.json()["title"] == "What is the policy?"
-            
+
             # List messages (should be chronological)
             msgs_res = await client.get(f"/api/v1/conversations/{conv_id}/messages", headers=headers)
             msgs = msgs_res.json()
@@ -111,20 +111,20 @@ async def test_failed_llm_does_not_save_assistant_message():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         token = await get_demo_token(client, "ADMIN")
         headers = {"Authorization": f"Bearer {token}"}
-        
+
         res = await client.post("/api/v1/conversations", headers=headers, json={})
         conv_id = res.json()["id"]
-        
+
         with patch("app.services.chat.rag_service.rag_service.generate_answer", new_callable=AsyncMock) as mock_generate:
             mock_generate.side_effect = RuntimeError("LLM Offline")
-            
+
             msg_res = await client.post(
                 f"/api/v1/conversations/{conv_id}/messages",
                 headers=headers,
                 json={"content": "Hello?"}
             )
             assert msg_res.status_code == 503
-            
+
             # Check messages - only user message should be saved
             msgs_res = await client.get(f"/api/v1/conversations/{conv_id}/messages", headers=headers)
             msgs = msgs_res.json()
@@ -136,10 +136,10 @@ async def test_invalid_messages_rejected():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         token = await get_demo_token(client, "ADMIN")
         headers = {"Authorization": f"Bearer {token}"}
-        
+
         res = await client.post("/api/v1/conversations", headers=headers, json={})
         conv_id = res.json()["id"]
-        
+
         # Empty message
         msg_res = await client.post(
             f"/api/v1/conversations/{conv_id}/messages",
@@ -147,7 +147,7 @@ async def test_invalid_messages_rejected():
             json={"content": "   "}
         )
         assert msg_res.status_code == 422
-        
+
         # Too large message
         msg_res2 = await client.post(
             f"/api/v1/conversations/{conv_id}/messages",
@@ -155,3 +155,48 @@ async def test_invalid_messages_rejected():
             json={"content": "a" * 5000}
         )
         assert msg_res2.status_code == 422
+
+async def test_stream_message():
+    from httpx import AsyncClient, ASGITransport
+    from app.main import app
+    from app.models.message import MessageRole
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        token = await get_demo_token(client, "ADMIN")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Create conversation
+        res = await client.post("/api/v1/conversations", headers=headers, json={"title": "Test Stream"})
+        assert res.status_code == 201
+        conv_id = res.json()["id"]
+
+        # We need to mock rag_service.generate_answer_stream so we don't call real ollama
+        from unittest.mock import patch, AsyncMock
+
+        async def mock_generate_answer_stream(content, ctx, db):
+            yield {"type": "token", "text": "Mock"}
+            yield {"type": "token", "text": " Stream"}
+            yield {"type": "citations", "citations": []}
+
+        with patch("app.api.v1.conversations.rag_service.generate_answer_stream", side_effect=mock_generate_answer_stream):
+            # Send message and consume stream
+            async with client.stream("POST", f"/api/v1/conversations/{conv_id}/messages/stream", headers=headers, json={"content": "Streaming test?"}) as stream_res:
+                assert stream_res.status_code == 200
+                events = []
+                async for line in stream_res.aiter_lines():
+                    if line.startswith("event: "):
+                        events.append(line.split("event: ")[1])
+
+                assert "start" in events
+                assert "token" in events
+                assert "citations" in events
+                assert "done" in events
+
+        # Verify persistence
+        msgs_res = await client.get(f"/api/v1/conversations/{conv_id}/messages", headers=headers)
+        assert msgs_res.status_code == 200
+        msgs = msgs_res.json()
+        assert len(msgs) == 2
+        assert msgs[0]["role"] == MessageRole.USER.value
+        assert msgs[1]["role"] == MessageRole.ASSISTANT.value
+        assert msgs[1]["content"] == "Mock Stream"

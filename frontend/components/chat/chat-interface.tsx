@@ -33,7 +33,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const conversationId = searchParams.get('id')
-  
+
   const [query, setQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -48,7 +48,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       })
@@ -65,7 +65,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations/${id}/messages`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       })
@@ -93,26 +93,33 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
     }
   }, [conversationId])
 
+  const scrollRafRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
   const scrollToBottom = () => {
-    setTimeout(() => {
+    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current)
+    scrollRafRef.current = requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, 100)
+    })
   }
 
   const handleCreateNew = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ title: 'New Conversation' })
       })
-      
+
       if (res.ok) {
         const data = await res.json()
         router.push(`/${role.toLowerCase()}/chat?id=${data.id}`)
@@ -142,7 +149,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
       if (!currentConvId) {
         const convRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json'
           },
@@ -155,11 +162,11 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
         fetchConversations()
       }
 
-      const tempId = `temp-${Date.now()}`
-      setMessages(prev => [...prev, { id: tempId, role: 'USER', content: userMessageContent, created_at: new Date().toISOString(), citations: [] }])
+      const tempUserId = `temp-${Date.now()}`
+      setMessages(prev => [...prev, { id: tempUserId, role: 'USER', content: userMessageContent, created_at: new Date().toISOString(), citations: [] }])
       scrollToBottom()
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations/${currentConvId}/messages`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations/${currentConvId}/messages/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,14 +184,47 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
         throw new Error(msg)
       }
 
-      const data = await res.json()
-      
-      setMessages(prev => {
-        const filtered = prev.filter(m => m.id !== tempId)
-        return [...filtered, data.user_message, data.assistant_message]
-      })
-      scrollToBottom()
-      
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+      const tempAssistantId = `temp-assistant-${Date.now()}`
+
+      setMessages(prev => [...prev, { id: tempAssistantId, role: 'ASSISTANT', content: '', created_at: new Date().toISOString(), citations: [] }])
+
+      if (reader) {
+        let buffer = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const blocks = buffer.split('\n\n')
+          buffer = blocks.pop() || ''
+
+          for (const block of blocks) {
+            const eventMatch = block.match(/event: (.*)\n/)
+            const dataMatch = block.match(/data: (.*)/)
+
+            if (eventMatch && dataMatch) {
+              const event = eventMatch[1]
+              const data = JSON.parse(dataMatch[1])
+
+              if (event === 'start') {
+                setMessages(prev => prev.map(m => m.id === tempUserId ? { ...m, id: data.message_id } : m))
+              } else if (event === 'token') {
+                setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, content: m.content + data.text } : m))
+              } else if (event === 'citations') {
+                setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, citations: data.citations } : m))
+              } else if (event === 'done') {
+                setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, id: data.message_id } : m))
+              } else if (event === 'error') {
+                setError(data.message)
+                setMessages(prev => prev.filter(m => m.id !== tempAssistantId))
+              }
+            }
+          }
+        }
+      }
+
     } catch (err: any) {
       setError(err.message || 'An error occurred.')
       setMessages(prev => prev.filter(m => !m.id.startsWith('temp-')))
@@ -202,7 +242,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
 
   return (
     <PageTransition className="flex h-full bg-slate-50 relative overflow-hidden">
-      
+
       <div className="md:hidden absolute top-4 left-4 z-50">
         <Button size="icon" variant="outline" className="bg-white/80 backdrop-blur-md" onClick={() => setSidebarOpen(true)}>
           <Menu className="w-4 h-4" />
@@ -221,7 +261,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
             <X className="w-4 h-4" />
           </Button>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-3 space-y-1">
           {conversations.length === 0 ? (
             <p className="text-xs text-center text-slate-400 mt-4">No conversations yet.</p>
@@ -248,7 +288,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
       </div>
 
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-30 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -268,7 +308,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.02]">
                 <BrainCircuit className="w-96 h-96" />
               </div>
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
@@ -286,10 +326,10 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
           ) : (
             <div className="max-w-3xl mx-auto space-y-8 pb-10">
               {messages.map((msg, idx) => (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  key={msg.id} 
+                  key={msg.id}
                   className={cn(
                     "flex gap-4 w-full",
                     msg.role === 'USER' ? "justify-end" : "justify-start"
@@ -300,7 +340,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
                       <BrainCircuit className="w-5 h-5" />
                     </div>
                   )}
-                  
+
                   <div className={cn(
                     "max-w-[85%] rounded-2xl px-5 py-4 shadow-sm",
                     msg.role === 'USER' ? "bg-slate-900 text-white" : "bg-white border border-slate-200/80"
@@ -328,7 +368,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
                       </div>
                     )}
                   </div>
-                  
+
                   {msg.role === 'USER' && (
                     <div className="w-8 h-8 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 shadow-sm mt-1">
                       <MessageSquare className="w-4 h-4" />
@@ -356,22 +396,22 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
             </div>
           )}
         </div>
-        
+
         <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent pt-10 z-20">
           <form onSubmit={handleSubmit} className="max-w-3xl mx-auto relative group shadow-2xl rounded-2xl bg-white flex items-end p-2 border border-slate-200 focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-500 transition-all">
-            <textarea 
+            <textarea
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full max-h-32 min-h-[44px] resize-none bg-transparent outline-none text-sm p-3 placeholder:text-slate-400 custom-scrollbar" 
+              className="w-full max-h-32 min-h-[44px] resize-none bg-transparent outline-none text-sm p-3 placeholder:text-slate-400 custom-scrollbar"
               placeholder="Message KnowledgeHub AI..."
               rows={1}
               style={{ height: Math.max(44, Math.min(120, query.split('\n').length * 20 + 24)) + 'px' }}
             />
-            <Button 
+            <Button
               type="submit"
               disabled={isSearching || !query.trim()}
-              size="icon" 
+              size="icon"
               className="h-10 w-10 shrink-0 rounded-xl bg-primary-600 hover:bg-primary-700 shadow-sm transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 ml-2 self-end mb-0.5"
             >
               {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

@@ -19,31 +19,31 @@ class LLMService:
             # 1. Check if Ollama is reachable
             async with httpx.AsyncClient(timeout=3.0) as client:
                 res = await client.get(f"{self.base_url}/api/tags")
-                
+
                 if res.status_code != 200:
                     return {
                         "status": "unhealthy",
                         "details": f"Ollama returned status {res.status_code}"
                     }
-                
+
                 # 2. Check if the required model is available
                 data = res.json()
                 models = data.get("models", [])
-                
+
                 model_names = [m.get("name") for m in models]
-                
+
                 # Try exact match, or check if base model matches
                 if self.model not in model_names and f"{self.model}:latest" not in model_names:
                     return {
                         "status": "unhealthy",
                         "details": f"Model '{self.model}' not found in Ollama. Available: {model_names}"
                     }
-                
+
                 return {
                     "status": "healthy",
                     "details": f"Ollama is reachable and '{self.model}' is available."
                 }
-                
+
         except httpx.RequestError as e:
             return {
                 "status": "unhealthy",
@@ -71,24 +71,68 @@ class LLMService:
                     "options": {
                         "temperature": 0.1,  # Keep it grounded
                         "top_p": 0.9,
+                        "num_predict": 1024,
                     }
                 }
-                
+
                 if response_format:
                     payload["format"] = response_format
-                
+
                 res = await client.post(f"{self.base_url}/api/chat", json=payload)
-                
+
                 if res.status_code != 200:
                     logger.error(f"Ollama API returned status {res.status_code}: {res.text}")
                     raise RuntimeError("Failed to generate response from LLM service.")
-                
+
                 data = res.json()
                 message = data.get("message", {})
                 content = message.get("content", "")
-                
+
                 return content
-                
+
+        except httpx.RequestError as e:
+            logger.error(f"Connection error while calling Ollama: {str(e)}")
+            raise RuntimeError("LLM service is currently unreachable.")
+        except Exception as e:
+            logger.error(f"Unexpected error during LLM generation: {str(e)}")
+            raise RuntimeError("An unexpected error occurred during generation.")
+
+    async def generate_chat_stream(self, system_prompt: str, user_prompt: str):
+        """
+        Stream a response using the native Ollama HTTP API.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                payload = {
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "stream": True,
+                    "options": {
+                        "temperature": 0.1,
+                        "top_p": 0.9,
+                        "num_predict": 1024,
+                    }
+                }
+
+                import json
+                async with client.stream("POST", f"{self.base_url}/api/chat", json=payload) as res:
+                    if res.status_code != 200:
+                        text = await res.aread()
+                        logger.error(f"Ollama API returned status {res.status_code}: {text.decode('utf-8')}")
+                        raise RuntimeError("Failed to generate response from LLM service.")
+
+                    async for line in res.aiter_lines():
+                        if line:
+                            try:
+                                data = json.loads(line)
+                                if "message" in data and "content" in data["message"]:
+                                    yield data["message"]["content"]
+                            except json.JSONDecodeError:
+                                continue
+
         except httpx.RequestError as e:
             logger.error(f"Connection error while calling Ollama: {str(e)}")
             raise RuntimeError("LLM service is currently unreachable.")
