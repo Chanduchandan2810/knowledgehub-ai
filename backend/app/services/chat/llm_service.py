@@ -55,7 +55,7 @@ class LLMService:
                 "details": f"Unexpected error during health check: {str(e)}"
             }
 
-    async def generate_chat(self, system_prompt: str, user_prompt: str) -> str:
+    async def generate_chat(self, system_prompt: str, user_prompt: str, response_format: str | None = None) -> str:
         """
         Generate a response using the native Ollama HTTP API.
         """
@@ -73,6 +73,9 @@ class LLMService:
                         "top_p": 0.9,
                     }
                 }
+                
+                if response_format:
+                    payload["format"] = response_format
                 
                 res = await client.post(f"{self.base_url}/api/chat", json=payload)
                 

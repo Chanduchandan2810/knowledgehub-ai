@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.api.deps import get_current_user_context, UserContext
 from app.models.conversation import Conversation
 from app.models.message import Message, MessageRole
+from app.models.citation import Citation
 from app.schemas.conversation import (
     ConversationCreate,
     ConversationResponse,
@@ -169,6 +170,18 @@ async def send_message(
     )
     db.add(assistant_msg)
     
+    # We must flush to get assistant_msg.id for citations
+    await db.flush()
+    
+    # 6. Persist Citations (ignoring duplicates via logic, already validated in RAGService)
+    for cited_chunk in rag_res.citations:
+        citation = Citation(
+            message_id=assistant_msg.id,
+            chunk_id=cited_chunk.chunk_id,
+            document_id=cited_chunk.document_id
+        )
+        db.add(citation)
+
     # Touch conversation again so updated_at reflects assistant response
     conv.updated_at = datetime.now(timezone.utc)
     

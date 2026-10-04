@@ -17,6 +17,13 @@ class ConversationResponse(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
+class CitationResponse(BaseModel):
+    id: uuid.UUID
+    chunk_id: uuid.UUID
+    document_id: uuid.UUID
+    
+    model_config = ConfigDict(from_attributes=True)
+
 class MessageCreate(BaseModel):
     content: str
 
@@ -25,6 +32,7 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     created_at: datetime
+    citations: List[CitationResponse] = []
     
     model_config = ConfigDict(from_attributes=True)
 
