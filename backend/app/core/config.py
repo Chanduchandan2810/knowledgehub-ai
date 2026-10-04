@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     RETRIEVAL_TOP_K: int = 5
     RETRIEVAL_THRESHOLD_COSINE_DISTANCE: float = 0.65
     
+    # Phase 6 AI Chat Config
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3.2:1b-instruct-q4_K_M"
+    
     MAX_PAGE_COUNT: int = 500
     MAX_CHUNK_COUNT: int = 5000
     PROCESSING_TIMEOUT_MINUTES: int = 30
