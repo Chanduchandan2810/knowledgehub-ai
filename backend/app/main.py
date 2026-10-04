@@ -155,6 +155,9 @@ app.include_router(documents.router, prefix="/api/v1/documents", tags=["document
 from app.api.v1 import retrieval
 app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
 
+from app.api.v1 import conversations
+app.include_router(conversations.router, prefix="/api/v1/conversations", tags=["conversations"])
+
 from fastapi.responses import JSONResponse
 import traceback
 import logging
