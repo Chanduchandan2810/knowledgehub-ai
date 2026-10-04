@@ -174,6 +174,7 @@ async def send_message(
     await db.flush()
     
     # 6. Persist Citations (ignoring duplicates via logic, already validated in RAGService)
+    citation_objects = []
     for cited_chunk in rag_res.citations:
         citation = Citation(
             message_id=assistant_msg.id,
@@ -181,12 +182,16 @@ async def send_message(
             document_id=cited_chunk.document_id
         )
         db.add(citation)
+        citation_objects.append(citation)
 
     # Touch conversation again so updated_at reflects assistant response
     conv.updated_at = datetime.now(timezone.utc)
     
     await db.commit()
     await db.refresh(assistant_msg)
+    
+    # Attach for immediate Pydantic serialization
+    assistant_msg.citations = citation_objects
 
     return ChatResponse(
         user_message=user_msg,

@@ -1,6 +1,7 @@
 import uuid
 import enum
 from sqlalchemy import Column, String, DateTime, ForeignKey, text
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 
@@ -16,3 +17,5 @@ class Message(Base):
     role = Column(String, nullable=False)
     content = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), index=True)
+
+    citations = relationship("Citation", back_populates="message", lazy="selectin", cascade="all, delete-orphan")
