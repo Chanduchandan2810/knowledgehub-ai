@@ -38,6 +38,15 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3.2:1b-instruct-q4_K_M"
     
+    # Phase 7 Hybrid Search Config
+    HYBRID_VECTOR_WEIGHT: float = 0.7
+    HYBRID_KEYWORD_WEIGHT: float = 0.3
+    HYBRID_AGREEMENT_BONUS: float = 0.1
+    HYBRID_VECTOR_CANDIDATES: int = 10
+    HYBRID_KEYWORD_CANDIDATES: int = 10
+    HYBRID_FINAL_TOP_K: int = 5
+    HYBRID_KEYWORD_MIN_RANK: float = 0.001
+    
     MAX_PAGE_COUNT: int = 500
     MAX_CHUNK_COUNT: int = 5000
     PROCESSING_TIMEOUT_MINUTES: int = 30

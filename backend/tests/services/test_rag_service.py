@@ -41,7 +41,7 @@ async def test_no_context_returns_fallback_without_calling_llm(mock_ctx):
         has_relevant_results=False
     )
     
-    with patch("app.services.chat.rag_service.retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = empty_retrieval
         
         with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_generate:
@@ -73,7 +73,7 @@ async def test_generation_sends_correct_prompts(mock_ctx, mock_retrieved_chunk):
         has_relevant_results=True
     )
     
-    with patch("app.services.chat.rag_service.retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = retrieval
         
         with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_generate:
@@ -125,7 +125,7 @@ async def test_llm_failure_handled_cleanly(mock_ctx, mock_retrieved_chunk):
         has_relevant_results=True
     )
     
-    with patch("app.services.chat.rag_service.retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = retrieval
         
         with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_generate:
