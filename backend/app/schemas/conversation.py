@@ -21,6 +21,7 @@ class CitationResponse(BaseModel):
     id: uuid.UUID
     chunk_id: uuid.UUID
     document_id: uuid.UUID
+    filename: str | None = None
     
     model_config = ConfigDict(from_attributes=True)
 

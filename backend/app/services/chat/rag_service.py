@@ -180,7 +180,9 @@ CONTEXT:
         buffer = ""
         in_citations = False
         citations_text = ""
-        delimiter = "___CITATIONS___"
+        import re
+        citation_regex = re.compile(r'(___CITATIONS___|\[CITATIONS\]|EXCERPT CITATIONS:|CITATIONS:|SOURCES:)', re.IGNORECASE)
+        max_delim_len = 25
         
         # Dual-mode state
         delimiter_at_start = False
@@ -192,10 +194,10 @@ CONTEXT:
             buffer += token
 
             if not in_citations:
-                if delimiter in buffer:
-                    parts = buffer.split(delimiter, 1)
-                    answer_part = parts[0]
-                    citations_text = parts[1]
+                match = citation_regex.search(buffer)
+                if match:
+                    answer_part = buffer[:match.start()]
+                    citations_text = buffer[match.end():]
                     in_citations = True
 
                     if not answer_part.strip():
@@ -205,11 +207,11 @@ CONTEXT:
                         answer_text += answer_part
                         yield {"type": "token", "text": answer_part}
                 else:
-                    if len(buffer) > len(delimiter):
-                        safe_part = buffer[:-len(delimiter)]
+                    if len(buffer) > max_delim_len:
+                        safe_part = buffer[:-max_delim_len]
                         answer_text += safe_part
                         yield {"type": "token", "text": safe_part}
-                        buffer = buffer[-len(delimiter):]
+                        buffer = buffer[-max_delim_len:]
             else:
                 citations_text += token
                 if not delimiter_at_start:
@@ -231,7 +233,7 @@ CONTEXT:
                             answer_text += a_text
                             yield {"type": "token", "text": a_text}
                         
-                        delimiter = "SUPER_IMPOSSIBLE_DELIMITER_MATCH"
+                        citation_regex = re.compile(r'SUPER_IMPOSSIBLE_DELIMITER_MATCH')
                         buffer = ""
                     elif "\n" in citations_text and len(citations_text) > 100:
                         c_parts = citations_text.split("\n", 1)
@@ -246,7 +248,7 @@ CONTEXT:
                             answer_text += a_text
                             yield {"type": "token", "text": a_text}
                             
-                        delimiter = "SUPER_IMPOSSIBLE_DELIMITER_MATCH"
+                        citation_regex = re.compile(r'SUPER_IMPOSSIBLE_DELIMITER_MATCH')
                         buffer = ""
 
         # Flush remaining buffer
@@ -255,14 +257,16 @@ CONTEXT:
             yield {"type": "token", "text": buffer}
             
         if delimiter_at_start:
-            fallback = "The relevant information was found, but the model failed to generate a textual summary."
+            fallback = "I couldn't find enough information in the available documents to answer that question."
             answer_text = fallback
             yield {"type": "token", "text": fallback}
+            yield {"type": "citations", "citations": []}
+            return
 
         # Extract citations
         raw_citations = []
-        if in_citations:
-            raw_cits = [c.strip() for c in citations_text.replace('\n', '').split(',')]
+        if citations_text:
+            raw_cits = [c.strip(" .[]\"'") for c in citations_text.replace('\n', '').split(',')]
             raw_citations = [c for c in raw_cits if c]
 
         # Validate citations

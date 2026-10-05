@@ -101,7 +101,24 @@ async def list_messages(
         .order_by(Message.created_at)
     )
     result = await db.execute(msg_query)
-    return result.scalars().all()
+    msgs = result.scalars().all()
+
+    doc_ids = set()
+    for m in msgs:
+        for c in m.citations:
+            doc_ids.add(c.document_id)
+
+    if doc_ids:
+        from app.models.document import Document
+        doc_query = select(Document.id, Document.filename).where(Document.id.in_(doc_ids))
+        doc_result = await db.execute(doc_query)
+        doc_map = {doc_id: filename for doc_id, filename in doc_result.fetchall()}
+
+        for m in msgs:
+            for c in m.citations:
+                c.filename = doc_map.get(c.document_id)
+
+    return msgs
 
 @router.post("/{conversation_id}/messages", response_model=ChatResponse)
 async def send_message(
@@ -259,7 +276,8 @@ async def stream_message(
                     for c in validated_citations:
                         cit_data.append({
                             "chunk_id": str(c.chunk_id),
-                            "document_id": str(c.document_id)
+                            "document_id": str(c.document_id),
+                            "filename": getattr(c, "filename", None)
                         })
                     yield f"event: citations\ndata: {json_lib.dumps({'citations': cit_data})}\n\n"
 

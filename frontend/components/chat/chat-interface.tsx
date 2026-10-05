@@ -12,6 +12,7 @@ interface Citation {
   id: string
   chunk_id: string
   document_id: string
+  filename?: string
 }
 
 interface Message {
@@ -201,24 +202,36 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
           buffer = blocks.pop() || ''
 
           for (const block of blocks) {
-            const eventMatch = block.match(/event: (.*)\n/)
-            const dataMatch = block.match(/data: (.*)/)
+            const lines = block.split('\n')
+            let event = ''
+            let dataStr = ''
 
-            if (eventMatch && dataMatch) {
-              const event = eventMatch[1]
-              const data = JSON.parse(dataMatch[1])
+            for (const line of lines) {
+              if (line.startsWith('event:')) {
+                event = line.substring(6).trim()
+              } else if (line.startsWith('data:')) {
+                dataStr = line.substring(5).trim()
+              }
+            }
 
-              if (event === 'start') {
-                setMessages(prev => prev.map(m => m.id === tempUserId ? { ...m, id: data.message_id } : m))
-              } else if (event === 'token') {
-                setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, content: m.content + data.text } : m))
-              } else if (event === 'citations') {
-                setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, citations: data.citations } : m))
-              } else if (event === 'done') {
-                setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, id: data.message_id } : m))
-              } else if (event === 'error') {
-                setError(data.message)
-                setMessages(prev => prev.filter(m => m.id !== tempAssistantId))
+            if (event && dataStr) {
+              try {
+                const data = JSON.parse(dataStr)
+
+                if (event === 'start') {
+                  setMessages(prev => prev.map(m => m.id === tempUserId ? { ...m, id: data.message_id } : m))
+                } else if (event === 'token') {
+                  setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, content: m.content + (data.text || '') } : m))
+                } else if (event === 'citations') {
+                  setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, citations: data.citations || [] } : m))
+                } else if (event === 'done') {
+                  setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, id: data.message_id } : m))
+                } else if (event === 'error') {
+                  setError(data.message)
+                  setMessages(prev => prev.filter(m => m.id !== tempAssistantId))
+                }
+              } catch (e) {
+                console.error("Failed to parse SSE block:", block, e)
               }
             }
           }
@@ -358,10 +371,10 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
                           <Database className="w-3.5 h-3.5" /> Sources
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {msg.citations.map((cit, i) => (
+                          {Array.from(new Map(msg.citations.map(cit => [cit.document_id, cit])).values()).map((cit, i) => (
                             <div key={i} className="inline-flex items-center gap-1.5 text-[11px] font-medium bg-slate-50 text-slate-600 px-2 py-1 rounded border border-slate-200/60 hover:bg-slate-100 transition-colors cursor-default">
                               <FileText className="w-3 h-3 text-primary-500" />
-                              Doc {cit.document_id.substring(0,8)}
+                              {cit.filename ? cit.filename : `Doc ${cit.document_id.substring(0,8)}`}
                             </div>
                           ))}
                         </div>
