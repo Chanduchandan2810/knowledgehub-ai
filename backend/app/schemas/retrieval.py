@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import uuid
 
 class RetrievalRequest(BaseModel):
@@ -15,6 +15,11 @@ class RetrievedChunk(BaseModel):
     distance: float
     similarity: float
     token_count: int
+    # Phase 7 Hybrid Search scoring (internal, not exposed to frontend)
+    vector_score: Optional[float] = None
+    keyword_score: Optional[float] = None
+    hybrid_score: Optional[float] = None
+    retrieval_method: Optional[str] = None  # 'vector', 'keyword', or 'hybrid'
 
 class RetrievalResponse(BaseModel):
     query: str

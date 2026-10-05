@@ -4,7 +4,7 @@ import json
 import logging
 
 from app.api.deps import UserContext
-from app.services.retrieval.retrieval_service import retrieve_chunks
+from app.services.retrieval.hybrid_service import hybrid_retrieve_chunks
 from app.schemas.retrieval import RetrievedChunk
 from app.schemas.chat import RAGResponse
 from app.services.chat.llm_service import llm_service
@@ -82,8 +82,8 @@ class RAGService:
         db: AsyncSession
     ) -> RAGResponse:
 
-        # 1. Retrieve authorized chunks using Phase 5 retrieval
-        retrieval_response = await retrieve_chunks(question, ctx, db)
+        # 1. Retrieve authorized chunks using Phase 7 hybrid retrieval
+        retrieval_response = await hybrid_retrieve_chunks(question, ctx, db)
 
         # 2. Check for empty context
         if not retrieval_response.has_relevant_results:
@@ -153,8 +153,8 @@ CONTEXT:
         answer_text = ""
         validated_citations = []
 
-        # 1. Retrieve authorized chunks using Phase 5 retrieval
-        retrieval_response = await retrieve_chunks(question, ctx, db)
+        # 1. Retrieve authorized chunks using Phase 7 hybrid retrieval
+        retrieval_response = await hybrid_retrieve_chunks(question, ctx, db)
 
         # 2. Check for empty context
         if not retrieval_response.has_relevant_results:

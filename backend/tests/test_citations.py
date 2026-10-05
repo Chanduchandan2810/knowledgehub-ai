@@ -65,7 +65,7 @@ async def test_citation_validation_logic():
     fake_chunk_id = str(uuid.uuid4())
     mock_json_str = f'{{"answer": "Here is the answer.", "citation_ids": ["{str(chunk1.chunk_id)}", "{fake_chunk_id}"]}}'
     
-    with patch("app.services.chat.rag_service.retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = mock_retrieval_res
         
         with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_llm:
@@ -79,7 +79,7 @@ async def test_citation_validation_logic():
             
     # 2. Duplicate citations handled gracefully
     mock_json_str_dupes = f'{{"answer": "Answer", "citation_ids": ["{str(chunk2.chunk_id)}", "{str(chunk2.chunk_id)}"]}}'
-    with patch("app.services.chat.rag_service.retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = mock_retrieval_res
         
         with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_llm:
@@ -91,7 +91,7 @@ async def test_citation_validation_logic():
 
     # 3. No context scenario
     mock_retrieval_empty = RetrievalResponse(query="test", results=[], has_relevant_results=False)
-    with patch("app.services.chat.rag_service.retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = mock_retrieval_empty
         
         res = await rag_service.generate_answer("question3?", ctx, db)
