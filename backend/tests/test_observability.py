@@ -41,16 +41,18 @@ async def test_rag_error_observability(caplog):
         full_name="Test"
     )
     
-    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_ret:
-        mock_ret.side_effect = Exception("Simulated Failure")
-        try:
-            await rag_service.generate_answer("What is the refund policy?", ctx, None)
-        except Exception:
-            pass
+    with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_gen:
+        mock_gen.return_value = '{"tool": "standard_rag"}'
+        with patch("app.services.chat.agent_tools.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_ret:
+            mock_ret.side_effect = Exception("Simulated Failure")
+            try:
+                await rag_service.generate_answer("What is the refund policy?", ctx, None)
+            except Exception:
+                pass
             
     found_error_log = False
     for record in caplog.records:
-        if "[RAG]" in record.message and "outcome=error" in record.message:
+        if "[Agent]" in record.message and "outcome=error" in record.message:
             found_error_log = True
             assert "Simulated Failure" not in record.message
             assert "refund policy" not in record.message
@@ -74,17 +76,19 @@ async def test_rag_stream_error_observability(caplog):
         full_name="Test"
     )
     
-    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_ret:
-        mock_ret.side_effect = Exception("Simulated Stream Failure")
-        try:
-            async for _ in rag_service.generate_answer_stream("What is the refund policy?", ctx, None):
+    with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_gen:
+        mock_gen.return_value = '{"tool": "standard_rag"}'
+        with patch("app.services.chat.agent_tools.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_ret:
+            mock_ret.side_effect = Exception("Simulated Stream Failure")
+            try:
+                async for _ in rag_service.generate_answer_stream("What is the refund policy?", ctx, None):
+                    pass
+            except Exception:
                 pass
-        except Exception:
-            pass
             
     found_error_log = False
     for record in caplog.records:
-        if "[RAG-Stream]" in record.message and "outcome=error" in record.message:
+        if "[Agent]" in record.message and "outcome=error" in record.message:
             found_error_log = True
             assert "Simulated Stream Failure" not in record.message
             assert "refund policy" not in record.message
@@ -112,16 +116,17 @@ async def test_rag_no_context_observability(caplog):
     mock_response.has_relevant_results = False
     mock_response.results = []
     
-    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_ret:
-        mock_ret.return_value = mock_response
-        result = await rag_service.generate_answer("What is the secret password?", ctx, None)
+    with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_gen:
+        mock_gen.return_value = '{"tool": "standard_rag"}'
+        with patch("app.services.chat.agent_tools.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_ret:
+            mock_ret.return_value = mock_response
+            result = await rag_service.generate_answer("What is the secret password?", ctx, None)
 
     found_log = False
     for record in caplog.records:
-        if "[RAG]" in record.message and "outcome=no_context" in record.message:
+        if "[Agent]" in record.message and "outcome=no_context" in record.message:
             found_log = True
             assert "secret password" not in record.message
             assert "password" not in record.message.lower()
             
     assert found_log
-

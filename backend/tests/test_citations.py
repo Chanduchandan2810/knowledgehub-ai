@@ -65,11 +65,11 @@ async def test_citation_validation_logic():
     fake_chunk_alias = "[DOC-99]"
     mock_json_str = f'{{"answer": "Here is the answer.", "citation_aliases": ["[DOC-1]", "{fake_chunk_alias}"]}}'
 
-    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.agent_tools.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = mock_retrieval_res
 
         with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_llm:
-            mock_llm.return_value = mock_json_str
+            mock_llm.side_effect = ['{"tool": "standard_rag"}', mock_json_str]
 
             res = await rag_service.generate_answer("question?", ctx, db)
 
@@ -79,11 +79,11 @@ async def test_citation_validation_logic():
 
     # 2. Duplicate citations handled gracefully
     mock_json_str_dupes = f'{{"answer": "Answer", "citation_aliases": ["[DOC-2]", "[DOC-2]"]}}'
-    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.agent_tools.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = mock_retrieval_res
 
         with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_llm:
-            mock_llm.return_value = mock_json_str_dupes
+            mock_llm.side_effect = ['{"tool": "standard_rag"}', mock_json_str_dupes]
 
             res = await rag_service.generate_answer("question2?", ctx, db)
             assert len(res.citations) == 1
@@ -91,12 +91,14 @@ async def test_citation_validation_logic():
 
     # 3. No context scenario
     mock_retrieval_empty = RetrievalResponse(query="test", results=[], has_relevant_results=False)
-    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.agent_tools.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = mock_retrieval_empty
 
-        res = await rag_service.generate_answer("question3?", ctx, db)
-        assert len(res.citations) == 0
-        assert "couldn't find" in res.answer
+        with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_llm:
+            mock_llm.side_effect = ['{"tool": "standard_rag"}', "couldn't find"]
+            res = await rag_service.generate_answer("question3?", ctx, db)
+            assert len(res.citations) == 0
+            assert "couldn't find" in res.answer
 
 async def test_citation_endpoint_integration():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
