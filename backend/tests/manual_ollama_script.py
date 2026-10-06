@@ -29,7 +29,7 @@ async def main():
             distance=0.15, similarity=0.85, token_count=8
         )
         
-        context_text = ContextBuilder.build_context([chunk1, chunk2])
+        context_text, alias_map = ContextBuilder.build_context([chunk1, chunk2])
         question = "How many days of annual leave do I get, and who provides the health insurance?"
         
         user_prompt = f"""Please answer the following question based on the provided context.
