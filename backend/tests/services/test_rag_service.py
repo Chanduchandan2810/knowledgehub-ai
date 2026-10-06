@@ -41,16 +41,17 @@ async def test_no_context_returns_fallback_without_calling_llm(mock_ctx):
         has_relevant_results=False
     )
     
-    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.agent_tools.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = empty_retrieval
         
         with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_generate:
+            mock_generate.return_value = '{"tool": "standard_rag"}'
             
             response = await rag_service.generate_answer("How many leave days?", mock_ctx, AsyncMock())
             
             assert response.answer == NO_CONTEXT_MESSAGE
             assert len(response.retrieved_chunks) == 0
-            mock_generate.assert_not_called()
+            assert mock_generate.call_count == 1 # Only called for router, second call is skipped because no_context
 
 async def test_context_builder_formats_correctly(mock_retrieved_chunk):
     context, alias_map = ContextBuilder.build_context([mock_retrieved_chunk])
@@ -74,11 +75,11 @@ async def test_generation_sends_correct_prompts(mock_ctx, mock_retrieved_chunk):
         has_relevant_results=True
     )
     
-    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.agent_tools.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = retrieval
         
         with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_generate:
-            mock_generate.return_value = "Employees receive 20 days."
+            mock_generate.side_effect = ['{"tool": "standard_rag"}', "Employees receive 20 days."]
             
             response = await rag_service.generate_answer("How many leave days?", mock_ctx, AsyncMock())
             
@@ -88,8 +89,8 @@ async def test_generation_sends_correct_prompts(mock_ctx, mock_retrieved_chunk):
             assert response.retrieved_chunks[0] == mock_retrieved_chunk
             
             # Assert generate_chat was called with correct parameters
-            mock_generate.assert_called_once()
-            kwargs = mock_generate.call_args.kwargs
+            assert mock_generate.call_count == 2
+            kwargs = mock_generate.call_args_list[-1].kwargs
             
             assert kwargs["system_prompt"] == SYSTEM_PROMPT
             
@@ -128,7 +129,7 @@ async def test_llm_failure_handled_cleanly(mock_ctx, mock_retrieved_chunk):
         has_relevant_results=True
     )
     
-    with patch("app.services.chat.rag_service.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
+    with patch("app.services.chat.agent_tools.hybrid_retrieve_chunks", new_callable=AsyncMock) as mock_retrieve:
         mock_retrieve.return_value = retrieval
         
         with patch("app.services.chat.rag_service.llm_service.generate_chat", new_callable=AsyncMock) as mock_generate:

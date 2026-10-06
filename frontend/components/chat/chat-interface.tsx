@@ -35,7 +35,10 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
   const searchParams = useSearchParams()
   const conversationId = searchParams.get('id')
 
+
   const [query, setQuery] = useState('')
+  const [agentStatus, setAgentStatus] = useState<string | null>(null)
+
   const [isSearching, setIsSearching] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -137,8 +140,11 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
     if (!query.trim() || isSearching) return
 
     const userMessageContent = query.trim()
+
     setQuery('')
+    setAgentStatus(null)
     setIsSearching(true)
+
     setError(null)
 
     let currentConvId = conversationId
@@ -220,8 +226,12 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
 
                 if (event === 'start') {
                   setMessages(prev => prev.map(m => m.id === tempUserId ? { ...m, id: data.message_id } : m))
+                } else if (event === 'agent_status') {
+                  setAgentStatus(data.message)
                 } else if (event === 'token') {
+                  setAgentStatus(null) // clear when tokens start
                   setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, content: m.content + (data.text || '') } : m))
+
                 } else if (event === 'citations') {
                   setMessages(prev => prev.map(m => m.id === tempAssistantId ? { ...m, citations: data.citations || [] } : m))
                 } else if (event === 'done') {
@@ -395,13 +405,21 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
                   <div className="w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-1">
                     <Loader2 className="w-5 h-5 animate-spin" />
                   </div>
-                  <div className="bg-white border border-slate-200/80 rounded-2xl px-5 py-4 shadow-sm flex items-center gap-2 text-slate-500 text-sm">
-                    <span className="flex gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce [animation-delay:-0.3s]"></span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce [animation-delay:-0.15s]"></span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce"></span>
-                    </span>
-                    Generating response...
+                  <div className="bg-white border border-slate-200/80 rounded-2xl px-5 py-4 shadow-sm flex flex-col gap-1 text-slate-500 text-sm">
+                    {agentStatus && (
+                        <div className="flex items-center gap-2 text-primary-600 font-medium mb-1">
+                            <BrainCircuit className="w-4 h-4 animate-pulse" />
+                            {agentStatus}
+                        </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                        <span className="flex gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce [animation-delay:-0.3s]"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce [animation-delay:-0.15s]"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce"></span>
+                        </span>
+                        {agentStatus ? "Processing context..." : "Generating response..."}
+                    </div>
                   </div>
                 </motion.div>
               )}
