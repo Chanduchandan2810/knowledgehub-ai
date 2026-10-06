@@ -53,14 +53,15 @@ async def test_no_context_returns_fallback_without_calling_llm(mock_ctx):
             mock_generate.assert_not_called()
 
 async def test_context_builder_formats_correctly(mock_retrieved_chunk):
-    context = ContextBuilder.build_context([mock_retrieved_chunk])
+    context, alias_map = ContextBuilder.build_context([mock_retrieved_chunk])
     
     assert "[SOURCE]" in context
     assert "[/SOURCE]" in context
-    assert str(mock_retrieved_chunk.chunk_id) in context
+    assert "Citation Alias: [DOC-1]" in context
     assert "test_doc.pdf" in context
     assert "Page: 1" in context
     assert "Employees receive 20 days of annual leave." in context
+    assert alias_map["[DOC-1]"] == str(mock_retrieved_chunk.chunk_id)
     
     # Verify NO vectors or embeddings are in the context
     assert "0.1" not in context  # Distance should not be in the prompt
@@ -110,13 +111,15 @@ async def test_multiple_chunks_ordering(mock_ctx):
         page_number=2, chunk_index=1, content="Second fact.", distance=0.2, similarity=0.8, token_count=5
     )
     
-    context = ContextBuilder.build_context([chunk1, chunk2])
+    context, alias_map = ContextBuilder.build_context([chunk1, chunk2])
     
     idx1 = context.find("First fact.")
     idx2 = context.find("Second fact.")
     assert idx1 != -1
     assert idx2 != -1
     assert idx1 < idx2
+    assert alias_map["[DOC-1]"] == str(chunk1.chunk_id)
+    assert alias_map["[DOC-2]"] == str(chunk2.chunk_id)
 
 async def test_llm_failure_handled_cleanly(mock_ctx, mock_retrieved_chunk):
     retrieval = RetrievalResponse(

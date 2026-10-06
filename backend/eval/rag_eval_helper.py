@@ -68,7 +68,7 @@ async def eval_generate_answer_with_raw(
         }
 
     # ---- Step 1: Build context exactly as production does ----
-    context_text = ContextBuilder.build_context(retrieval_results)
+    context_text, alias_map = ContextBuilder.build_context(retrieval_results)
 
     # ---- Step 2: Construct user prompt exactly as production does ----
     user_prompt = f"""Please answer the following question based on the provided context.
@@ -91,7 +91,22 @@ CONTEXT:
     try:
         data = json.loads(raw_llm_output)
         answer_text = data.get("answer", NO_CONTEXT_MESSAGE)
-        raw_citations = data.get("citation_ids", [])
+        raw_aliases = data.get("citation_aliases", data.get("citation_ids", []))
+
+        # In evaluation, we still need to provide `raw_citations` as UUIDs to the
+        # metric runner (which expects to check them against valid_chunk_map).
+        raw_citations = []
+        if isinstance(raw_aliases, list):
+            for alias in raw_aliases:
+                alias_str = str(alias).strip()
+                cid_str = alias_map.get(alias_str)
+                if cid_str:
+                    raw_citations.append(cid_str)
+                else:
+                    # If the model emitted a literal UUID or an unknown alias, just pass it through
+                    # so the evaluator can measure the failure correctly.
+                    raw_citations.append(alias_str)
+
     except json.JSONDecodeError:
         logger.warning("eval_generate_answer_with_raw: LLM returned invalid JSON.")
         answer_text = raw_llm_output
