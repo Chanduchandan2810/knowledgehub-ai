@@ -74,6 +74,7 @@ async def get_current_user_context(
     await db.execute(text(f"SET LOCAL role = 'authenticated';"))
     await db.execute(text(f"SET LOCAL app.current_tenant = '{ctx.organization_id}';"))
     
+    request.state.user_context = ctx
     return ctx
 
 async def require_admin_role(

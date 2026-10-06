@@ -137,9 +137,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import time
+import httpx
+from fastapi import Request, Depends
+from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.session import get_db
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = (time.time() - start_time) * 1000
+    
+    ctx = getattr(request.state, "user_context", None)
+    tenant_info = f" org={ctx.organization_id} user={ctx.user_id}" if ctx else ""
+    
+    logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.2f}ms{tenant_info}")
+    return response
+
 @app.get("/health")
-async def health_check():
-    return {"status": "ok", "message": "KnowledgeHub AI API is running"}
+async def health_check(db: AsyncSession = Depends(get_db)):
+    status_response = {"status": "ok", "message": "KnowledgeHub AI API is running"}
+    
+    # Check Database
+    try:
+        await db.execute(text("SELECT 1"))
+        status_response["database"] = "ok"
+    except Exception:
+        status_response["database"] = "unhealthy"
+        status_response["status"] = "degraded"
+        
+    # Check Ollama
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            res = await client.get(f"{settings.OLLAMA_BASE_URL}/api/tags")
+            if res.status_code == 200:
+                status_response["ollama"] = "ok"
+            else:
+                status_response["ollama"] = "unhealthy"
+                status_response["status"] = "degraded"
+    except Exception:
+        status_response["ollama"] = "unhealthy"
+        status_response["status"] = "degraded"
+        
+    return JSONResponse(
+        status_code=200 if status_response["status"] == "ok" else 503,
+        content=status_response
+    )
 
 app.include_router(organizations.router, prefix="/api/v1/organizations", tags=["organizations"])
 

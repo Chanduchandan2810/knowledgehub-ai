@@ -1,3 +1,4 @@
+import time
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 import json
@@ -89,23 +90,36 @@ class RAGService:
         ctx: UserContext,
         db: AsyncSession
     ) -> RAGResponse:
+        t0 = time.time()
+        t_retrieval = 0.0
+        t_context = 0.0
+        t_generation = 0.0
+        success = False
+        try:
+            # 1. Retrieve authorized chunks using Phase 7 hybrid retrieval
+            retrieval_response = await hybrid_retrieve_chunks(question, ctx, db)
+            t_retrieval = (time.time() - t0) * 1000
 
-        # 1. Retrieve authorized chunks using Phase 7 hybrid retrieval
-        retrieval_response = await hybrid_retrieve_chunks(question, ctx, db)
+            # 2. Check for empty context
+            if not retrieval_response.has_relevant_results:
+                logger.info(f"[RAG] retrieval_ms={t_retrieval:.2f} context_ms=0.00 generation_ms=0.00 citations=0 outcome=no_context")
+                success = True
+                return RAGResponse(
+                    answer=NO_CONTEXT_MESSAGE,
+                    retrieved_chunks=[],
+                    citations=[]
+                )
 
-        # 2. Check for empty context
-        if not retrieval_response.has_relevant_results:
-            return RAGResponse(
-                answer=NO_CONTEXT_MESSAGE,
-                retrieved_chunks=[],
-                citations=[]
-            )
+            t1 = time.time()
 
-        # 3. Build context
-        context_text, alias_map = ContextBuilder.build_context(retrieval_response.results)
+            # 3. Build context
+            context_text, alias_map = ContextBuilder.build_context(retrieval_response.results)
+            t_context = (time.time() - t1) * 1000
 
-        # 4. Construct user prompt ensuring clear separation
-        user_prompt = f"""Please answer the following question based on the provided context.
+            t2 = time.time()
+
+            # 4. Construct user prompt ensuring clear separation
+            user_prompt = f"""Please answer the following question based on the provided context.
 
 QUESTION:
 {question}
@@ -114,46 +128,52 @@ CONTEXT:
 {context_text}
 """
 
-        # 5. Call LLM Service requesting JSON output
-        # Exceptions (e.g., unreachable) will bubble up cleanly as configured in LLMService
-        generated_json_str = await llm_service.generate_chat(
-            system_prompt=SYSTEM_PROMPT,
-            user_prompt=user_prompt,
-            response_format="json"
-        )
+            # 5. Call LLM Service requesting JSON output
+            # Exceptions (e.g., unreachable) will bubble up cleanly as configured in LLMService
+            generated_json_str = await llm_service.generate_chat(
+                system_prompt=SYSTEM_PROMPT,
+                user_prompt=user_prompt,
+                response_format="json"
+            )
+            t_generation = (time.time() - t2) * 1000
 
-        # 6. Parse JSON output
-        try:
-            data = json.loads(generated_json_str)
-            answer_text = data.get("answer", NO_CONTEXT_MESSAGE)
-            raw_citations = data.get("citation_aliases", data.get("citation_ids", []))
-        except json.JSONDecodeError:
-            logger.warning("LLM failed to return valid JSON. Falling back to raw text.")
-            answer_text = generated_json_str
-            raw_citations = []
+            # 6. Parse JSON output
+            try:
+                data = json.loads(generated_json_str)
+                answer_text = data.get("answer", NO_CONTEXT_MESSAGE)
+                raw_citations = data.get("citation_aliases", data.get("citation_ids", []))
+            except json.JSONDecodeError:
+                logger.warning("LLM failed to return valid JSON. Falling back to raw text.")
+                answer_text = generated_json_str
+                raw_citations = []
 
-        # 7. Validate citations against authorized retrieved chunks
-        valid_chunk_map = {str(c.chunk_id): c for c in retrieval_response.results}
+            # 7. Validate citations against authorized retrieved chunks
+            valid_chunk_map = {str(c.chunk_id): c for c in retrieval_response.results}
 
-        validated_citations = []
-        seen_ids = set()
+            validated_citations = []
+            seen_ids = set()
 
-        if isinstance(raw_citations, list):
-            for alias in raw_citations:
-                alias_str = str(alias).strip()
-                # Resolve alias -> UUID string
-                cid_str = alias_map.get(alias_str)
-                # Strict validation of resolved UUID
-                if cid_str and cid_str in valid_chunk_map and cid_str not in seen_ids:
-                    validated_citations.append(valid_chunk_map[cid_str])
-                    seen_ids.add(cid_str)
+            if isinstance(raw_citations, list):
+                for alias in raw_citations:
+                    alias_str = str(alias).strip()
+                    # Resolve alias -> UUID string
+                    cid_str = alias_map.get(alias_str)
+                    # Strict validation of resolved UUID
+                    if cid_str and cid_str in valid_chunk_map and cid_str not in seen_ids:
+                        validated_citations.append(valid_chunk_map[cid_str])
+                        seen_ids.add(cid_str)
 
-        # 8. Return structured result
-        return RAGResponse(
-            answer=answer_text,
-            retrieved_chunks=retrieval_response.results,
-            citations=validated_citations
-        )
+            # 8. Return structured result
+            logger.info(f"[RAG] retrieval_ms={t_retrieval:.2f} context_ms={t_context:.2f} generation_ms={t_generation:.2f} citations={len(validated_citations)} outcome=success")
+            success = True
+            return RAGResponse(
+                answer=answer_text,
+                retrieved_chunks=retrieval_response.results,
+                citations=validated_citations
+            )
+        finally:
+            if not success:
+                logger.info(f"[RAG] retrieval_ms={t_retrieval:.2f} context_ms={t_context:.2f} generation_ms={t_generation:.2f} outcome=error")
 
     async def generate_answer_stream(
         self,
@@ -161,24 +181,39 @@ CONTEXT:
         ctx: UserContext,
         db: AsyncSession
     ):
+        t0 = time.time()
+        t_retrieval = 0.0
+        t_context = 0.0
+        t_generation = 0.0
+        success = False
+        
         answer_text = ""
         validated_citations = []
+        
+        try:
+            # 1. Retrieve authorized chunks using Phase 7 hybrid retrieval
+            retrieval_response = await hybrid_retrieve_chunks(question, ctx, db)
+            t_retrieval = (time.time() - t0) * 1000
 
-        # 1. Retrieve authorized chunks using Phase 7 hybrid retrieval
-        retrieval_response = await hybrid_retrieve_chunks(question, ctx, db)
+            # 2. Check for empty context
+            if not retrieval_response.has_relevant_results:
+                logger.info(f"[RAG-Stream] retrieval_ms={t_retrieval:.2f} context_ms=0.00 generation_ms=0.00 citations=0 outcome=no_context")
+                success = True
+                answer_text = NO_CONTEXT_MESSAGE
+                yield {"type": "token", "text": NO_CONTEXT_MESSAGE}
+                yield {"type": "citations", "citations": []}
+                return
 
-        # 2. Check for empty context
-        if not retrieval_response.has_relevant_results:
-            answer_text = NO_CONTEXT_MESSAGE
-            yield {"type": "token", "text": NO_CONTEXT_MESSAGE}
-            yield {"type": "citations", "citations": []}
-            return
+            t1 = time.time()
 
-        # 3. Build context
-        context_text, alias_map = ContextBuilder.build_context(retrieval_response.results)
+            # 3. Build context
+            context_text, alias_map = ContextBuilder.build_context(retrieval_response.results)
+            t_context = (time.time() - t1) * 1000
 
-        # 4. Construct user prompt ensuring clear separation
-        user_prompt = f"""Please answer the following question based on the provided context.
+            t2 = time.time()
+
+            # 4. Construct user prompt ensuring clear separation
+            user_prompt = f"""Please answer the following question based on the provided context.
 
 QUESTION:
 {question}
@@ -187,115 +222,123 @@ CONTEXT:
 {context_text}
 """
 
-        # 5. Call LLM Service streaming
-        buffer = ""
-        in_citations = False
-        citations_text = ""
-        import re
-        citation_regex = re.compile(r'(___CITATIONS___|\[CITATIONS\]|EXCERPT CITATIONS:|CITATIONS:|SOURCES:)', re.IGNORECASE)
-        max_delim_len = 25
+            # 5. Call LLM Service streaming
+            buffer = ""
+            in_citations = False
+            citations_text = ""
+            import re
+            citation_regex = re.compile(r'(___CITATIONS___|\[CITATIONS\]|EXCERPT CITATIONS:|CITATIONS:|SOURCES:)', re.IGNORECASE)
+            max_delim_len = 25
 
-        # Dual-mode state
-        delimiter_at_start = False
+            # Dual-mode state
+            delimiter_at_start = False
 
-        async for token in llm_service.generate_chat_stream(
-            system_prompt=SYSTEM_PROMPT_STREAM,
-            user_prompt=user_prompt
-        ):
-            buffer += token
+            async for token in llm_service.generate_chat_stream(
+                system_prompt=SYSTEM_PROMPT_STREAM,
+                user_prompt=user_prompt
+            ):
+                buffer += token
 
-            if not in_citations:
-                match = citation_regex.search(buffer)
-                if match:
-                    answer_part = buffer[:match.start()]
-                    citations_text = buffer[match.end():]
-                    in_citations = True
+                if not in_citations:
+                    match = citation_regex.search(buffer)
+                    if match:
+                        answer_part = buffer[:match.start()]
+                        citations_text = buffer[match.end():]
+                        in_citations = True
 
-                    if not answer_part.strip():
-                        # The delimiter was generated at the very beginning!
-                        delimiter_at_start = True
+                        if not answer_part.strip():
+                            # The delimiter was generated at the very beginning!
+                            delimiter_at_start = True
+                        else:
+                            answer_text += answer_part
+                            yield {"type": "token", "text": answer_part}
                     else:
-                        answer_text += answer_part
-                        yield {"type": "token", "text": answer_part}
+                        if len(buffer) > max_delim_len:
+                            safe_part = buffer[:-max_delim_len]
+                            answer_text += safe_part
+                            yield {"type": "token", "text": safe_part}
+                            buffer = buffer[-max_delim_len:]
                 else:
-                    if len(buffer) > max_delim_len:
-                        safe_part = buffer[:-max_delim_len]
-                        answer_text += safe_part
-                        yield {"type": "token", "text": safe_part}
-                        buffer = buffer[-max_delim_len:]
-            else:
-                citations_text += token
-                if not delimiter_at_start:
-                    if len(citations_text) > 500:
-                        break
-                else:
-                    # If delimiter was at start, citations_text contains citations AND the answer!
-                    # The answer usually follows a double newline or a single newline.
-                    if "\n\n" in citations_text:
-                        c_parts = citations_text.split("\n\n", 1)
-                        c_text = c_parts[0]
-                        a_text = c_parts[1]
+                    citations_text += token
+                    if not delimiter_at_start:
+                        if len(citations_text) > 500:
+                            break
+                    else:
+                        # If delimiter was at start, citations_text contains citations AND the answer!
+                        # The answer usually follows a double newline or a single newline.
+                        if "\n\n" in citations_text:
+                            c_parts = citations_text.split("\n\n", 1)
+                            c_text = c_parts[0]
+                            a_text = c_parts[1]
 
-                        citations_text = c_text
-                        in_citations = False
-                        delimiter_at_start = False
+                            citations_text = c_text
+                            in_citations = False
+                            delimiter_at_start = False
 
-                        if a_text:
-                            answer_text += a_text
-                            yield {"type": "token", "text": a_text}
+                            if a_text:
+                                answer_text += a_text
+                                yield {"type": "token", "text": a_text}
 
-                        citation_regex = re.compile(r'SUPER_IMPOSSIBLE_DELIMITER_MATCH')
-                        buffer = ""
-                    elif "\n" in citations_text and len(citations_text) > 100:
-                        c_parts = citations_text.split("\n", 1)
-                        c_text = c_parts[0]
-                        a_text = c_parts[1]
+                            citation_regex = re.compile(r'SUPER_IMPOSSIBLE_DELIMITER_MATCH')
+                            buffer = ""
+                        elif "\n" in citations_text and len(citations_text) > 100:
+                            c_parts = citations_text.split("\n", 1)
+                            c_text = c_parts[0]
+                            a_text = c_parts[1]
 
-                        citations_text = c_text
-                        in_citations = False
-                        delimiter_at_start = False
+                            citations_text = c_text
+                            in_citations = False
+                            delimiter_at_start = False
 
-                        if a_text:
-                            answer_text += a_text
-                            yield {"type": "token", "text": a_text}
+                            if a_text:
+                                answer_text += a_text
+                                yield {"type": "token", "text": a_text}
 
-                        citation_regex = re.compile(r'SUPER_IMPOSSIBLE_DELIMITER_MATCH')
-                        buffer = ""
+                            citation_regex = re.compile(r'SUPER_IMPOSSIBLE_DELIMITER_MATCH')
+                            buffer = ""
 
-        # Flush remaining buffer
-        if not in_citations and buffer:
-            answer_text += buffer
-            yield {"type": "token", "text": buffer}
+            # Flush remaining buffer
+            if not in_citations and buffer:
+                answer_text += buffer
+                yield {"type": "token", "text": buffer}
 
-        if delimiter_at_start:
-            fallback = "I couldn't find enough information in the available documents to answer that question."
-            answer_text = fallback
-            yield {"type": "token", "text": fallback}
-            yield {"type": "citations", "citations": []}
-            return
+            if delimiter_at_start:
+                fallback = "I couldn't find enough information in the available documents to answer that question."
+                answer_text = fallback
+                yield {"type": "token", "text": fallback}
+                yield {"type": "citations", "citations": []}
+                success = True
+                return
 
-        # Extract citations
-        raw_citations = []
-        if citations_text:
-            # We keep brackets for alias mapping but remove other junk
-            raw_cits = [c.strip(" .\"'") for c in citations_text.replace('\n', '').split(',')]
-            raw_citations = [c for c in raw_cits if c]
+            # Extract citations
+            raw_citations = []
+            if citations_text:
+                # We keep brackets for alias mapping but remove other junk
+                raw_cits = [c.strip(" .\"'") for c in citations_text.replace('\n', '').split(',')]
+                raw_citations = [c for c in raw_cits if c]
 
-        # Validate citations
-        valid_chunk_map = {str(c.chunk_id): c for c in retrieval_response.results}
-        seen_ids = set()
+            # Validate citations
+            valid_chunk_map = {str(c.chunk_id): c for c in retrieval_response.results}
+            seen_ids = set()
 
-        for alias in raw_citations:
-            alias_str = str(alias).strip()
-            # Auto-wrap in brackets if model output DOC-1 instead of [DOC-1]
-            if not alias_str.startswith("[") and alias_str.startswith("DOC-"):
-                alias_str = f"[{alias_str}]"
+            for alias in raw_citations:
+                alias_str = str(alias).strip()
+                # Auto-wrap in brackets if model output DOC-1 instead of [DOC-1]
+                if not alias_str.startswith("[") and alias_str.startswith("DOC-"):
+                    alias_str = f"[{alias_str}]"
 
-            cid_str = alias_map.get(alias_str)
-            if cid_str and cid_str in valid_chunk_map and cid_str not in seen_ids:
-                validated_citations.append(valid_chunk_map[cid_str])
-                seen_ids.add(cid_str)
+                cid_str = alias_map.get(alias_str)
+                if cid_str and cid_str in valid_chunk_map and cid_str not in seen_ids:
+                    validated_citations.append(valid_chunk_map[cid_str])
+                    seen_ids.add(cid_str)
 
-        yield {"type": "citations", "citations": validated_citations}
+            t_generation = (time.time() - t2) * 1000
+            logger.info(f"[RAG-Stream] retrieval_ms={t_retrieval:.2f} context_ms={t_context:.2f} generation_ms={t_generation:.2f} citations={len(validated_citations)} outcome=success")
+            success = True
+            yield {"type": "citations", "citations": validated_citations}
+        except Exception as e:
+            if not success:
+                logger.info(f"[RAG-Stream] retrieval_ms={t_retrieval:.2f} context_ms={t_context:.2f} generation_ms={t_generation:.2f} outcome=error")
+            raise
 
 rag_service = RAGService()
