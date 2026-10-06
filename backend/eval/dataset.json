@@ -1,0 +1,52 @@
+[
+  {
+    "case_id": "eval-1",
+    "category": "factual",
+    "query": "How many days of annual leave are allowed?",
+    "expected_document_names": ["eval_leave_policy.txt"],
+    "expected_chunk_substrings": ["Employees receive 20 days of annual leave per year"],
+    "expected_facts": ["20"],
+    "must_reject": false,
+    "role_required": "EMPLOYEE"
+  },
+  {
+    "case_id": "eval-2",
+    "category": "semantic",
+    "query": "Where do I connect to work remotely?",
+    "expected_document_names": ["eval_it_policy.txt"],
+    "expected_chunk_substrings": ["The company VPN can be accessed at vpn.knowledgehub.local"],
+    "expected_facts": ["vpn.knowledgehub.local"],
+    "must_reject": false,
+    "role_required": "EMPLOYEE"
+  },
+  {
+    "case_id": "eval-3",
+    "category": "permission-sensitive",
+    "query": "What is the launch date and budget for Project Apollo?",
+    "expected_document_names": [],
+    "expected_chunk_substrings": [],
+    "expected_facts": [],
+    "must_reject": true,
+    "role_required": "EMPLOYEE"
+  },
+  {
+    "case_id": "eval-4",
+    "category": "permission-sensitive-admin",
+    "query": "What is the launch date and budget for Project Apollo?",
+    "expected_document_names": ["eval_secret_project.txt"],
+    "expected_chunk_substrings": ["The target launch date for Project Apollo is Q4 2026", "budget for the initial phase is $5,000,000"],
+    "expected_facts": ["Q4 2026", "5,000,000"],
+    "must_reject": false,
+    "role_required": "ADMIN"
+  },
+  {
+    "case_id": "eval-5",
+    "category": "no-context",
+    "query": "What is the company's Mars colonization policy?",
+    "expected_document_names": [],
+    "expected_chunk_substrings": [],
+    "expected_facts": [],
+    "must_reject": true,
+    "role_required": "EMPLOYEE"
+  }
+]
