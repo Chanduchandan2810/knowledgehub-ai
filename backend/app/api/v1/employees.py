@@ -1,10 +1,11 @@
 from typing import List
 import uuid
+import secrets
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
-from app.api.deps import require_admin_role, UserContext
+from app.api.deps import require_admin_role, UserContext, RateLimiter
 from app.models.employee import Employee
 from app.models.document import Document, AccessScope
 from app.models.document_permission import DocumentPermission
@@ -53,7 +54,8 @@ async def list_employees(
 async def create_employee(
     emp_in: EmployeeCreate,
     ctx: UserContext = Depends(require_admin_role),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    rate_limit: None = Depends(RateLimiter(requests=10, window=60))
 ):
     supabase_admin: Client = create_client(
         settings.SUPABASE_URL,
@@ -68,7 +70,7 @@ async def create_employee(
     try:
         res = supabase_admin.auth.admin.create_user({
             "email": emp_in.email,
-            "password": "123456",
+            "password": secrets.token_urlsafe(32),
             "email_confirm": True
         })
         auth_user_id = res.user.id

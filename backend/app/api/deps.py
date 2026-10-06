@@ -85,3 +85,28 @@ async def require_admin_role(
             detail="Admin privileges required"
         )
     return ctx
+import time
+
+_rate_limits = {}
+
+class RateLimiter:
+    def __init__(self, requests: int, window: int):
+        self.requests = requests
+        self.window = window
+
+    async def __call__(self, request: Request, ctx: UserContext = Depends(get_current_user_context)):
+        is_demo = ctx.organization_id == settings.DEMO_ORG_ID
+        limit = max(1, self.requests // 2) if is_demo else self.requests
+
+        now = time.time()
+        key = (str(ctx.user_id), request.url.path)
+        
+        count, reset_time = _rate_limits.get(key, (0, 0))
+        if now > reset_time:
+            count = 0
+            reset_time = now + self.window
+            
+        if count >= limit:
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+            
+        _rate_limits[key] = (count + 1, reset_time)

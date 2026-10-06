@@ -7,7 +7,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
-from app.api.deps import get_current_user_context, require_admin_role, UserContext
+from app.api.deps import get_current_user_context, require_admin_role, UserContext, RateLimiter
 from app.db.session import get_db
 from app.models.document import Document, DocumentStatus, AccessScope
 from app.models.document_permission import DocumentPermission
@@ -35,7 +35,8 @@ async def upload_document(
     file: UploadFile = File(...),
     access_scope: AccessScope = Form(AccessScope.ORGANIZATION),
     ctx: UserContext = Depends(require_admin_role),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    rate_limit: None = Depends(RateLimiter(requests=10, window=60))
 ):
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename missing")
@@ -316,12 +317,16 @@ async def reprocess_document(
     document_id: uuid.UUID,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    ctx: UserContext = Depends(require_admin_role)
+    ctx: UserContext = Depends(require_admin_role),
+    rate_limit: None = Depends(RateLimiter(requests=10, window=60))
 ):
     """
     Explicitly reprocess a FAILED or PROCESSED document (Admin only).
     """
-    stmt = select(Document).where(Document.id == document_id)
+    stmt = select(Document).where(
+        Document.id == document_id,
+        Document.organization_id == ctx.organization_id
+    )
     result = await db.execute(stmt)
     doc = result.scalar_one_or_none()
     
