@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timezone
 
 from app.db.session import get_db
-from app.api.deps import get_current_user_context, UserContext
+from app.api.deps import get_current_user_context, UserContext, RateLimiter
 from app.models.conversation import Conversation
 from app.models.message import Message, MessageRole
 from app.models.citation import Citation
@@ -125,7 +125,8 @@ async def send_message(
     conversation_id: uuid.UUID,
     msg_in: MessageCreate,
     ctx: UserContext = Depends(get_current_user_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    rate_limit: None = Depends(RateLimiter(requests=10, window=60))
 ):
     """Send a message, trigger RAG generation, and return the response."""
     # 1. Validate input
@@ -223,7 +224,8 @@ async def stream_message(
     conversation_id: uuid.UUID,
     msg_in: MessageCreate,
     ctx: UserContext = Depends(get_current_user_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    rate_limit: None = Depends(RateLimiter(requests=10, window=60))
 ):
     """Stream a message and trigger RAG generation."""
     content = msg_in.content.strip()

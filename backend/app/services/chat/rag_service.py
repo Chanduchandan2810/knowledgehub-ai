@@ -70,11 +70,13 @@ class ContextBuilder:
             alias_map[alias] = str(chunk.chunk_id)
             page_info = f"\nPage: {chunk.page_number}" if chunk.page_number else ""
 
+            safe_content = chunk.content.strip().replace("[SOURCE]", "\[SOURCE\]").replace("[/SOURCE]", "\[/SOURCE\]")
+            
             chunk_text = f"""[SOURCE]
 Citation Alias: {alias}
 Document: {chunk.filename}{page_info}
 Content:
-{chunk.content.strip()}
+{safe_content}
 [/SOURCE]"""
             context_parts.append(chunk_text)
 
