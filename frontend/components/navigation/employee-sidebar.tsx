@@ -19,7 +19,7 @@ export function EmployeeSidebar() {
     const fetchData = async () => {
       const match = document.cookie.match(/(^|;)\s*khub_org_id\s*=\s*([^;]+)/);
       const orgId = match ? (match.pop() as string) : '';
-      
+
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         setLoading(false)
@@ -62,9 +62,31 @@ export function EmployeeSidebar() {
     fetchData()
   }, [])
 
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  useEffect(() => {
+    const handleToggle = () => setIsMobileOpen(prev => !prev)
+    window.addEventListener('toggle-mobile-sidebar', handleToggle)
+    return () => window.removeEventListener('toggle-mobile-sidebar', handleToggle)
+  }, [])
+
+  // Close sidebar on navigation on mobile
+  useEffect(() => {
+    setIsMobileOpen(false)
+  }, [pathname])
+
   return (
-    <aside className="hidden md:flex flex-col w-[260px] flex-shrink-0 border-r border-slate-200 bg-slate-50/50 z-20">
-      <div className="h-16 flex items-center px-4 border-b border-slate-200/60 bg-transparent">
+    <>
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/50 z-40 md:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+      <aside className={cn(
+        "flex-col w-[260px] flex-shrink-0 border-r border-slate-200 bg-white md:bg-slate-50/50 z-50 md:z-20 transition-transform",
+        isMobileOpen ? "fixed inset-y-0 left-0 flex" : "hidden md:flex"
+      )}>
+        <div className="h-16 flex items-center px-4 border-b border-slate-200/60 bg-transparent">
         <Link href="/employee/chat" className="flex items-center gap-2 font-bold text-lg tracking-tight text-slate-900 group w-full">
           <div className="bg-primary-600 text-white p-1 rounded-md shadow-sm group-hover:bg-primary-700 transition-colors">
             <BrainCircuit className="w-4 h-4" />
@@ -72,7 +94,7 @@ export function EmployeeSidebar() {
           KnowledgeHub AI
         </Link>
       </div>
-      
+
       <div className="p-4">
         <Link href="/employee/chat" className="w-full justify-start shadow-sm bg-primary-600 hover:bg-primary-700 text-white font-medium h-10 rounded-lg flex items-center px-4 transition-colors text-sm">
           <Plus className="mr-2 h-4 w-4" /> New Chat
@@ -85,7 +107,7 @@ export function EmployeeSidebar() {
 
       <div className="p-4 border-t border-slate-200/60 bg-white space-y-2">
         {userEmail === 'employee@demo.knowledgehub.local' && (
-          <button 
+          <button
             onClick={async () => {
               await supabase.auth.signOut()
               window.location.href = '/demo'
@@ -127,5 +149,6 @@ export function EmployeeSidebar() {
         </div>
       </div>
     </aside>
+    </>
   )
 }
