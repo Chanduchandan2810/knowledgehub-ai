@@ -131,7 +131,7 @@ export default function AdminEmployees() {
         }
       
       if (res.ok) {
-        setaddResult({ success: true, message: 'Employee created successfully. Temporary password: 123456',  })
+        setaddResult({ success: true, message: `Employee created successfully. Temporary password: ${data?.temporary_password || 'Unknown'}`  })
         setemployeeEmail('')
         setemployeeName('')
         fetchEmployees()

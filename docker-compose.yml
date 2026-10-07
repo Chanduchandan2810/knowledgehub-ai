@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: knowledgehub-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Database Connections
+      - DATABASE_URL=${DATABASE_URL}
+      - MIGRATION_DATABASE_URL=${MIGRATION_DATABASE_URL}
+      # Supabase Config
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      # CORS Config
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-http://localhost:3000}
+      # Ollama Config
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      - ollama
+    networks:
+      - khub_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: knowledgehub-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      - BACKEND_INTERNAL_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - khub_network
+
+  ollama:
+    image: ollama/ollama
+    container_name: knowledgehub-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    # No exposed ports strictly required since backend reaches it internally,
+    # but left unmapped to host by default to satisfy requirements.
+    networks:
+      - khub_network
+
+  ollama-init:
+    image: ollama/ollama
+    container_name: knowledgehub-ollama-init
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    command: >
+      sh -c "
+      echo 'Waiting for Ollama to be available...'
+      until ollama list >/dev/null 2>&1; do
+        sleep 2
+      done
+      if ollama list | grep -q 'llama3.2:1b-instruct-q4_K_M'; then
+        echo 'Model llama3.2:1b-instruct-q4_K_M already exists, skipping pull.'
+      else
+        echo 'Model not found. Pulling llama3.2:1b-instruct-q4_K_M...'
+        ollama pull llama3.2:1b-instruct-q4_K_M
+        echo 'Model pulled successfully.'
+      fi
+      "
+    depends_on:
+      - ollama
+    networks:
+      - khub_network
+
+networks:
+  khub_network:
+    driver: bridge
+
+volumes:
+  ollama_data:

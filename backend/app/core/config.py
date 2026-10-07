@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     DEMO_ADMIN_ID: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000002")
     DEMO_EMPLOYEE_ID: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000003")
 
+    # CORS Config
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000"
+
     model_config = SettingsConfigDict(env_file=str(ROOT_DIR / ".env"), case_sensitive=True, extra="ignore")
 
 settings = Settings()

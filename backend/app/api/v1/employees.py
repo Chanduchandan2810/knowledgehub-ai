@@ -24,6 +24,7 @@ class EmployeeResponse(BaseModel):
     full_name: str
     role: str
     joined_at: str
+    temporary_password: str | None = None
 
     class Config:
         from_attributes = True
@@ -46,7 +47,8 @@ async def list_employees(
             "email": emp.email,
             "full_name": emp.full_name,
             "role": "EMPLOYEE",
-            "joined_at": emp.created_at.isoformat() if emp.created_at else ""
+            "joined_at": emp.created_at.isoformat() if emp.created_at else "",
+            "temporary_password": None
         })
     return employees
 
@@ -67,10 +69,12 @@ async def create_employee(
     if result.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="An employee with this email already exists.")
 
+    temp_password = secrets.token_urlsafe(32)
+
     try:
         res = supabase_admin.auth.admin.create_user({
             "email": emp_in.email,
-            "password": secrets.token_urlsafe(32),
+            "password": temp_password,
             "email_confirm": True
         })
         auth_user_id = res.user.id
@@ -107,5 +111,6 @@ async def create_employee(
         "email": new_emp.email,
         "full_name": new_emp.full_name,
         "role": "EMPLOYEE",
-        "joined_at": new_emp.created_at.isoformat() if new_emp.created_at else ""
+        "joined_at": new_emp.created_at.isoformat() if new_emp.created_at else "",
+        "temporary_password": temp_password
     }
