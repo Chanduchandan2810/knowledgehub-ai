@@ -50,11 +50,11 @@ export function AdminTopbar({ title, description, role = "ADMIN" }: { title: str
           const authData = await authRes.json()
           const isDemoAdmin = session.user?.email === 'admin@demo.knowledgehub.local'
           const isDemoEmployee = session.user?.email === 'employee@demo.knowledgehub.local'
-          
+
           let display = authData.full_name
           if (isDemoAdmin) display = 'Demo Admin'
           else if (isDemoEmployee) display = 'Demo Employee'
-          
+
           setUserName(display)
           setUserEmail(session.user?.email || authData.email)
         }
@@ -70,7 +70,12 @@ export function AdminTopbar({ title, description, role = "ADMIN" }: { title: str
   return (
     <header className="h-16 flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-4 sm:px-6 z-10">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" className="md:hidden text-slate-500">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden text-slate-500"
+          onClick={() => window.dispatchEvent(new Event('toggle-mobile-sidebar'))}
+        >
           <Menu className="h-5 w-5" />
         </Button>
         <div>
@@ -78,7 +83,7 @@ export function AdminTopbar({ title, description, role = "ADMIN" }: { title: str
           {description && <p className="text-xs text-slate-500 hidden sm:block">{description}</p>}
         </div>
       </div>
-      
+
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="hidden lg:flex items-center mr-4 border-r border-slate-200 pr-4">
           <div className="text-right">
@@ -90,20 +95,20 @@ export function AdminTopbar({ title, description, role = "ADMIN" }: { title: str
             </p>
           </div>
         </div>
-        
+
         <div className="relative hidden xl:block w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
           <Input type="search" placeholder="Search knowledge base..." className="w-full pl-9 bg-slate-50 border-slate-200 text-sm h-9 rounded-md shadow-inner transition-all focus:bg-white" />
         </div>
-        
+
         <div className="flex items-center gap-1 sm:gap-2 pl-2">
           <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600 rounded-full h-8 w-8 relative">
             <Bell className="h-4 w-4" />
           </Button>
           <LogoutButton />
           <div className={`ml-2 w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold cursor-default shadow-sm hidden sm:flex ${
-            role === 'ADMIN' 
-              ? 'bg-purple-100 text-purple-700 border-purple-200' 
+            role === 'ADMIN'
+              ? 'bg-purple-100 text-purple-700 border-purple-200'
               : 'bg-blue-100 text-blue-700 border-blue-200'
           }`}>
             {loading ? '...' : (userName ? userName.charAt(0).toUpperCase() : (role === 'ADMIN' ? 'A' : 'E'))}

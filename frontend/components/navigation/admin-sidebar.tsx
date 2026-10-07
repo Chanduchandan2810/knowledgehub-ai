@@ -79,6 +79,18 @@ export function AdminSidebar() {
     fetchData()
   }, [])
 
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  useEffect(() => {
+    const handleToggle = () => setIsMobileOpen(prev => !prev)
+    window.addEventListener('toggle-mobile-sidebar', handleToggle)
+    return () => window.removeEventListener('toggle-mobile-sidebar', handleToggle)
+  }, [])
+
+  // Close sidebar on navigation on mobile
+  useEffect(() => {
+    setIsMobileOpen(false)
+  }, [pathname])
+
   const NavGroup = ({ items, label }: { items: any[], label: string }) => (
     <div className="mb-6">
       <h3 className="px-4 text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</h3>
@@ -95,7 +107,7 @@ export function AdminSidebar() {
               )}
             >
               <item.icon className={cn(
-                "mr-3 h-4 w-4 transition-colors", 
+                "mr-3 h-4 w-4 transition-colors",
                 isActive ? "text-primary-600" : "text-slate-400 group-hover:text-slate-600"
               )} />
               {item.name}
@@ -107,25 +119,35 @@ export function AdminSidebar() {
   )
 
   return (
-    <aside className="hidden md:flex flex-col w-[260px] flex-shrink-0 border-r border-slate-200/80 bg-white z-20">
-      <div className="h-16 flex items-center px-6 border-b border-slate-100">
-        <Link href="/admin/dashboard" className="flex items-center gap-2.5 font-bold text-lg tracking-tight text-slate-900 group">
+    <>
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/50 z-40 md:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+      <aside className={cn(
+        "flex-col w-[260px] flex-shrink-0 border-r border-slate-200/80 bg-white z-50 md:z-20 transition-transform",
+        isMobileOpen ? "fixed inset-y-0 left-0 flex" : "hidden md:flex"
+      )}>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100">
+          <Link href="/admin/dashboard" className="flex items-center gap-2.5 font-bold text-lg tracking-tight text-slate-900 group">
           <div className="bg-primary-600 text-white p-1 rounded-md shadow-sm group-hover:bg-primary-700 transition-colors">
             <BrainCircuit className="w-4 h-4" />
           </div>
           KnowledgeHub AI
         </Link>
       </div>
-      
+
       <div className="flex-1 py-6 overflow-y-auto custom-scrollbar">
         <NavGroup label="Workspace" items={workspaceNav} />
         <NavGroup label="Insights" items={insightsNav} />
         <NavGroup label="Configuration" items={configNav} />
       </div>
-      
+
       <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-2">
         {userEmail === 'admin@demo.knowledgehub.local' && (
-          <button 
+          <button
             onClick={async () => {
               await supabase.auth.signOut()
               window.location.href = '/demo'
@@ -150,5 +172,6 @@ export function AdminSidebar() {
         </div>
       </div>
     </aside>
+    </>
   )
 }
