@@ -66,6 +66,19 @@ async def test_cross_user_isolation():
         res_fetch = await client.get(f"/api/v1/conversations/{conv_id}", headers=emp_headers)
         assert res_fetch.status_code == 404  # Not found for this user
 
+        # Employee attempts to POST a message to Admin's conversation (IDOR attack)
+        res_send = await client.post(
+            f"/api/v1/conversations/{conv_id}/messages",
+            headers=emp_headers,
+            json={"content": "Malicious injection into admin conversation!"}
+        )
+        assert res_send.status_code == 404 # Not found for this user
+
+        # Verify no message was actually injected
+        res_verify = await client.get(f"/api/v1/conversations/{conv_id}/messages", headers=admin_headers)
+        messages = res_verify.json()
+        assert len(messages) == 0
+
 from unittest.mock import patch, AsyncMock
 from app.schemas.chat import RAGResponse
 from app.models.message import MessageRole

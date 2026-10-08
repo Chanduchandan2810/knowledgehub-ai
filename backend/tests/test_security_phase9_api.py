@@ -59,10 +59,52 @@ async def test_idor_document_reprocessing_rejected():
         assert "Document not found" in res_b.json()["detail"]
 
         # Try self on Doc A
-        # Since we just uploaded it, it's UPLOADED, not FAILED/PROCESSED, so process endpoint will reject it with 400.
-        # Let's mock it to FAILED or just accept the 400 as proof it found the document.
         res_a = await client.post(f"/api/v1/documents/{doc_a_id}/process", headers=headers)
         assert res_a.status_code == 200
+
+@pytest.mark.asyncio
+async def test_idor_document_deletion_rejected():
+    async with AsyncClient(transport=ASGITransport(app=app, raise_app_exceptions=False), base_url="http://test") as client:
+        token = await get_demo_token(client, "ADMIN")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Upload Doc A for Org A
+        files = {"file": ("org_a_doc.txt", io.BytesIO(b"Content A"), "text/plain")}
+        res_upload = await client.post("/api/v1/documents", headers=headers, files=files)
+        assert res_upload.status_code == 201
+        doc_a_id = res_upload.json()["id"]
+
+        # Create Org B and Doc B
+        from app.db.session import AsyncSessionLocal
+        from app.models.organization import Organization
+        from app.models.document import Document, AccessScope, DocumentStatus
+
+        org_b_id = uuid.uuid4()
+        doc_b_id = uuid.uuid4()
+
+        async with AsyncSessionLocal() as session:
+            session.add(Organization(id=org_b_id, name="Org B"))
+            await session.commit()
+
+            session.add(Document(
+                id=doc_b_id,
+                organization_id=org_b_id,
+                filename="org_b_doc.txt",
+                storage_path="org_b/doc.txt",
+                mime_type="text/plain",
+                file_size=10,
+                status=DocumentStatus.UPLOADED.value,
+                access_scope=AccessScope.ORGANIZATION.value
+            ))
+            await session.commit()
+
+        # Admin A attempts to delete Doc B
+        res_delete_b = await client.delete(f"/api/v1/documents/{doc_b_id}", headers=headers)
+        assert res_delete_b.status_code == 404
+
+        # Admin A deletes Doc A
+        res_delete_a = await client.delete(f"/api/v1/documents/{doc_a_id}", headers=headers)
+        assert res_delete_a.status_code == 204
 
 @pytest.mark.asyncio
 async def test_employee_creation_no_hardcoded_password():

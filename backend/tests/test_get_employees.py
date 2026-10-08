@@ -10,13 +10,21 @@ from app.core.security import security
 pytestmark = pytest.mark.asyncio
 
 async def test_get_employees():
-    pytest.skip("Skipping DB test due to strict auth.users FK constraint")
+    from app.db.session import AsyncSessionLocal
+    from sqlalchemy import text
+
     admin_id = str(uuid.uuid4())
-    token1 = "token1"
+
+    # Pre-seed auth.users to satisfy FK constraint
+    async with AsyncSessionLocal() as db:
+        await db.execute(text(f"INSERT INTO auth.users (id) VALUES ('{admin_id}') ON CONFLICT DO NOTHING"))
+        await db.commit()
+
+    token1 = "admin_token1"
     headers1 = {"Authorization": f"Bearer {token1}"}
 
     def override_verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
-        if credentials.credentials == "token1":
+        if credentials.credentials == "admin_token1":
             return {"sub": admin_id, "email": f"admin_{admin_id}@test.com", "user_metadata": {"full_name": "Admin One"}}
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -29,14 +37,14 @@ async def test_get_employees():
                 json={"name": "Org 1"},
                 headers=headers1
             )
-            if resp.status_code == 500:
-                pytest.skip("Skipping test due to auth.users FK violation")
             assert resp.status_code == 201
             org_id = resp.json()["id"]
 
             headers1_org = {"Authorization": f"Bearer {token1}", "x-organization-id": org_id}
             resp = await client.get("/api/v1/employees", headers=headers1_org)
             assert resp.status_code == 200
-            
+            data = resp.json()
+            assert len(data) == 0 # Only contains employees, Admin isn't technically an 'employee' record, but if the endpoint returns admins, adjust assertion.
+
     finally:
         app.dependency_overrides.clear()
