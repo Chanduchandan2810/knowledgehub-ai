@@ -22,7 +22,10 @@ def upgrade() -> None:
     """Upgrade schema."""
     op.drop_table('organization_memberships')
     op.drop_index(op.f('ix_users_email'), table_name='users')
+
+    op.drop_constraint('employees_user_id_fkey', 'employees', type_='foreignkey')
     op.drop_table('users')
+
     op.alter_column('employees', 'created_at',
                existing_type=postgresql.TIMESTAMP(timezone=True),
                nullable=True,
@@ -66,6 +69,7 @@ def downgrade() -> None:
     sa.Column('full_name', sa.VARCHAR(), autoincrement=False, nullable=True),
     sa.PrimaryKeyConstraint('id', name=op.f('users_pkey'))
     )
+    op.create_foreign_key('employees_user_id_fkey', 'employees', 'users', ['auth_user_id'], ['id'], ondelete='CASCADE')
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_table('organization_memberships',
     sa.Column('id', sa.UUID(), autoincrement=False, nullable=False),
