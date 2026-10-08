@@ -103,3 +103,20 @@ async def seed_demo_data():
 
         # 4. employees
         await conn.execute(text(f"INSERT INTO employees (id, auth_user_id, organization_id, full_name, email) VALUES ('{emp_id}', '{employee_auth_id}', '{org_id}', 'Demo Employee', 'employee@demo.knowledgehub.local') ON CONFLICT DO NOTHING;"))
+
+from unittest.mock import AsyncMock
+
+@pytest.fixture(autouse=True)
+def mock_storage(monkeypatch):
+    mock_upload = AsyncMock()
+    async def fake_upload(file_bytes, storage_path, mime_type):
+        return storage_path
+    mock_upload.side_effect = fake_upload
+
+    mock_delete = AsyncMock()
+
+    # Patch where the functions are imported and used
+    monkeypatch.setattr("app.api.v1.documents.upload_document_to_storage", mock_upload)
+    monkeypatch.setattr("app.api.v1.documents.delete_document_from_storage", mock_delete)
+
+    return mock_upload, mock_delete
