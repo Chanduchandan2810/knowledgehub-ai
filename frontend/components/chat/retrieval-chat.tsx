@@ -1,5 +1,5 @@
 "use client"
-import { BrainCircuit, Send, Database, ShieldCheck, HelpCircle, Loader2, FileText } from 'lucide-react'
+import { BrainCircuit, Send, Database, Loader2, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PageTransition } from '@/components/shared/page-transition'
@@ -24,7 +24,7 @@ interface RetrievalResponse {
   has_relevant_results: boolean
 }
 
-export function RetrievalChat({ role }: { role: 'Admin' | 'Employee' }) {
+export function RetrievalChat({ }: { role: 'Admin' | 'Employee' }) {
   const [query, setQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [retrievedData, setRetrievedData] = useState<RetrievalResponse | null>(null)
@@ -42,7 +42,7 @@ export function RetrievalChat({ role }: { role: 'Admin' | 'Employee' }) {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/retrieval`, {
+      const res = await fetch(`/api/v1/retrieval`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

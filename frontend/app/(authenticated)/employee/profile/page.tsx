@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { User, Building, Mail, ShieldCheck } from 'lucide-react'
 import { PageTransition } from '@/components/shared/page-transition'
-import { Button } from '@/components/ui/button'
+
 
 export default function EmployeeProfile() {
   const [loading, setLoading] = useState(true)

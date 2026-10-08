@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     DEMO_ORG_ID: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000001")
     DEMO_ADMIN_ID: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000002")
     DEMO_EMPLOYEE_ID: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000003")
+    DEMO_SANDBOX_PASSWORD: str = "SecureDemoPassword123!"
 
     # CORS Config
     BACKEND_CORS_ORIGINS: str = "http://localhost:3000"

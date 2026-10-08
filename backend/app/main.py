@@ -57,7 +57,7 @@ async def seed_demo_sandbox():
         if not admin_auth_user_id:
             res = admin_supabase.auth.admin.create_user({
                 "email": demo_admin_email,
-                "password": "SecureDemoPassword123!",
+                "password": settings.DEMO_SANDBOX_PASSWORD,
                 "email_confirm": True
             })
             admin_auth_user_id = res.user.id
@@ -65,7 +65,7 @@ async def seed_demo_sandbox():
         if not emp_auth_user_id:
             res = admin_supabase.auth.admin.create_user({
                 "email": demo_emp_email,
-                "password": "SecureDemoPassword123!",
+                "password": settings.DEMO_SANDBOX_PASSWORD,
                 "email_confirm": True
             })
             emp_auth_user_id = res.user.id

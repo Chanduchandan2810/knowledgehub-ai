@@ -1,5 +1,5 @@
 "use client"
-import { BrainCircuit, Send, Database, ShieldCheck, HelpCircle, Users, LayoutDashboard } from 'lucide-react'
+import { BrainCircuit, ShieldCheck, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PageTransition } from '@/components/shared/page-transition'
 import { motion } from 'framer-motion'
@@ -29,7 +29,7 @@ export default function DemoPage() {
       
       console.log('Setting Supabase session...')
       const supabase = createClient()
-      const { data, error } = await supabase.auth.setSession({
+      const { error } = await supabase.auth.setSession({
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token
       })

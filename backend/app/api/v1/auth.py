@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from app.core.config import settings
 from app.api.deps import get_current_user_context, UserContext
 from app.core.security import supabase
 
@@ -19,7 +20,7 @@ async def start_demo(request: DemoStartRequest):
         # Sign in using the fixed demo credentials to generate a real Supabase session
         auth_response = supabase.auth.sign_in_with_password({
             "email": email,
-            "password": "SecureDemoPassword123!"
+            "password": settings.DEMO_SANDBOX_PASSWORD
         })
         
         return {

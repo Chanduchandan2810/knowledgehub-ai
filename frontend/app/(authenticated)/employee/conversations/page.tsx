@@ -1,6 +1,6 @@
 "use client"
 import { MessageSquare, Search, Calendar, Loader2 } from 'lucide-react'
-import { EmptyState } from '@/components/shared/empty-state'
+
 import { PageTransition } from '@/components/shared/page-transition'
 import { Input } from '@/components/ui/input'
 import { useEffect, useState } from 'react'
@@ -25,7 +25,7 @@ export default function EmployeeConversations() {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) return
         
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations`, {
+        const res = await fetch(`/api/v1/conversations`, {
           headers: { 'Authorization': `Bearer ${session.access_token}` }
         })
         if (res.ok) {
@@ -39,7 +39,9 @@ export default function EmployeeConversations() {
       }
     }
     fetchConversations()
-  }, [])
+  }, // eslint-disable-next-line react-hooks/exhaustive-deps
+ []
+      )
 
   return (
     <div className="flex flex-col h-full bg-slate-50/50">

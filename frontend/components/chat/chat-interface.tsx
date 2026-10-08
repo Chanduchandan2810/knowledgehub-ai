@@ -53,7 +53,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations`, {
+      const res = await fetch(`/api/v1/conversations`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       })
       if (res.ok) {
@@ -79,7 +79,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations/${id}/messages`, {
+      const res = await fetch(`/api/v1/conversations/${id}/messages`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       })
       if (res.ok) {
@@ -119,7 +119,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations`, {
+      const res = await fetch(`/api/v1/conversations`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -158,7 +158,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
       if (!session) throw new Error('Not authenticated')
 
       if (!currentConvId) {
-        const convRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations`, {
+        const convRes = await fetch(`/api/v1/conversations`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -177,7 +177,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
       setMessages(prev => [...prev, { id: tempUserId, role: 'USER', content: userMessageContent, created_at: new Date().toISOString(), citations: [] }])
       scrollToBottom()
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/conversations/${currentConvId}/messages/stream`, {
+      const res = await fetch(`/api/v1/conversations/${currentConvId}/messages/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

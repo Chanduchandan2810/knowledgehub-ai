@@ -1,4 +1,4 @@
-﻿# KnowledgeHub AI
+# KnowledgeHub AI
 
 KnowledgeHub AI is a B2B multi-tenant AI knowledge platform.
 
@@ -8,117 +8,113 @@ KnowledgeHub AI enables organizations to securely upload internal knowledge docu
 ## 2. The Real-World Problem It Solves
 Modern organizations struggle with knowledge silos and information retrieval. Employees spend hours searching through handbooks, policies, and internal wikis. Public AI tools cannot be securely used with confidential data, and existing enterprise solutions often lack strict, document-level access controls. KnowledgeHub AI provides a secure, private, permission-aware AI assistant that answers questions based on data the specific employee is authorized to see.
 
-## 3. Who Uses It?
-KnowledgeHub AI is built for internal corporate teams (HR, IT, Engineering, Operations) that need instant, accurate access to company policies, documentation, and institutional knowledge.
+## 3. Features
+- **Multi-tenant Organization Isolation:** Backend-enforced organization/tenant isolation through authenticated user context, authorization dependencies, and permission-aware queries.
+- **Role-Based Access Control (RBAC):** Distinct portals and capabilities for Admin and Employee roles.
+- **Document Management:** Upload and manage company files directly through the web interface.
+- **Document Processing Pipeline:** Automated chunking and embedding generation using local sentence-transformer models.
+- **pgvector Integration:** Highly efficient vector search and storage natively in PostgreSQL.
+- **Hybrid Retrieval:** Fuses vector semantic search with exact keyword match searching (BM25-style) for optimal accuracy.
+- **Retrieval-Augmented Generation (RAG):** Context-aware LLM answers powered by local open-source models (Ollama).
+- **Citations:** Every AI claim is grounded and cited to the exact document chunks it used.
+- **Document Permissions:** Granular control over whether a document is accessible to all employees, specific roles, or restricted entirely.
+- **Prompt Injection Protection:** Dedicated validation models to sanitize and reject adversarial attacks.
+- **Rate Limiting:** Protects expensive AI endpoints from abuse.
+- **Observability:** Custom health checks and structured logging for debugging AI pipelines.
+- **Demo Sandbox:** A deterministic test environment built-in for rapid testing and demonstrations.
 
-## 4. Current Architecture
-- **Frontend**: Next.js App Router, React, TypeScript, Tailwind CSS.
-- **Backend**: Python, FastAPI, SQLAlchemy (async), asyncpg, Alembic.
-- **Database & Platform**: Supabase (PostgreSQL, Supabase Auth).
-- **Style**: Modular monolith (One Next.js frontend, one FastAPI backend, managed PostgreSQL/Auth).
+## 4. Current Roles
+- **ADMIN**: Manages the organization, manages employees, uploads/manages company documents, assigns document access permissions, and accesses organization-level administrative features.
+- **EMPLOYEE**: Belongs to an organization, accesses authorized company knowledge via the employee chat interface, and manages their own profile/settings.
 
-## 5. Current Roles
-There are exactly two application roles:
-- **ADMIN**: Manages the organization, manages employees, uploads/manages company documents (planned), manages document access/permissions (planned), and accesses organization-level administrative features.
-- **EMPLOYEE**: Belongs to an organization, accesses authorized company knowledge via the employee chat interface (planned), and manages their own profile/settings.
+## 5. Technology Stack & Deployment Architecture
+**Frontend**: Next.js App Router, React, TypeScript, Tailwind CSS, Lucide Icons.
+**Backend**: Python, FastAPI, SQLAlchemy (async), asyncpg, Alembic.
+**Database & Platform**: Supabase (PostgreSQL with pgvector, Supabase Auth).
+**AI & Search**: sentence-transformers (local embeddings), Ollama (local generation).
+**Infrastructure**: Fully dockerized modular monolith (Next.js container, FastAPI container, Ollama container).
 
-## 6. Technology Stack
-**Current**:
-- **Web Frameworks**: Next.js, FastAPI
-- **Database**: PostgreSQL (via Supabase)
-- **Authentication**: Supabase Auth (JWT)
-- **ORM**: SQLAlchemy (async) + Alembic
-
-**Planned**:
-- pgvector, PyMuPDF, embeddings, LLM provider, RAG, hybrid search.
-
-## 7. Current Project Status
-**Current State: Phase 2 (Authentication + Organizations) Completed.**
-The project has a multi-tenant database schema, working Supabase authentication, functional Next.js routing for both Admin and Employee portals, and a secured FastAPI backend.
-
-*Note: Document upload, Vector Search, and RAG capabilities are explicitly planned for future phases and are not yet implemented.*
-
-## 8. Repository Structure
-``text
+## 6. Repository Structure
+```text
 backend/
 ├── alembic/              # Database migration scripts
 ├── app/                  # FastAPI application code
-│   ├── api/v1/           # API Routers (auth, employees, organizations)
+│   ├── api/v1/           # API Routers (auth, employees, organizations, documents, chat)
 │   ├── core/             # Security and configuration
 │   ├── db/               # Database session management
-│   ├── models/           # SQLAlchemy models (admin, employee, organization)
+│   ├── models/           # SQLAlchemy models
 │   ├── schemas/          # Pydantic validation schemas
+│   ├── services/         # Business logic (RAG, documents, embeddings, hybrid search)
 │   └── main.py           # Application entrypoint
-├── tests/                # Pytest test suite
-├── alembic.ini           # Alembic configuration
+├── tests/                # 90+ Pytest security/integration tests
+├── Dockerfile            # Container configuration
 └── requirements.txt      # Python dependencies
 
 frontend/
 ├── app/
 │   ├── (auth)/           # /login, /register
-│   ├── (authenticated)/
-│   │   ├── admin/        # Admin portal (/admin/dashboard, etc.)
-│   │   └── employee/     # Employee portal (/employee/profile, etc.)
-│   ├── (demo)/           # /demo
+│   ├── (authenticated)/  # /admin and /employee layouts and portals
+│   ├── (demo)/           # /demo sandbox
 │   └── (marketing)/      # Public landing page (/)
 ├── components/           # Shared UI components and navigation
-├── middleware.ts         # Next.js API proxy
+├── middleware.ts         # Next.js API proxy and middleware
+├── Dockerfile            # Next.js standalone container build
 └── package.json          # Node dependencies
-``
+```
 
-## 9. Security Approach
-- **Multi-tenant isolation**: Every backend request is scoped to the user's organization.
-- **Authentication**: Handled via Supabase Auth.
-- **Backend Authorization**: FastAPI dependencies strictly enforce role-based access control (Admin vs. Employee).
-- **Database Level**: PostgreSQL Row Level Security (RLS) policies currently enforce tenant isolation on the active tables (organizations, dmins, employees).
-- **Environment Secrets**: Database URLs and API keys are managed via .env.
-- **Planned**: Document-level permissions and prompt injection defense for the upcoming RAG pipeline.
+## 7. Development Roadmap & Status
+**Current State: Phase 14 Completed. The project core is fully implemented.**
 
-## 10. Development Roadmap
-- [x] Phase 0 — Product + Architecture
-- [x] Phase 1 — Project Setup
-- [x] Phase 2 — Authentication + Organizations
-- [ ] **Phase 3 — Document Management (NEXT)**
-- [ ] Phase 4 — Document Processing + Embeddings
-- [ ] Phase 5 — Vector Search + RAG
-- [ ] Phase 6 — Chat + Citations
-- [ ] Phase 7 — Hybrid Search
-- [ ] Phase 8 — AI Evaluation
-- [ ] Phase 9 — Security Hardening
-- [ ] Phase 10 — Observability
-- [ ] Phase 11 — Agents
-- [ ] Phase 12 — Docker
-- [ ] Phase 13 — CI/CD
-- [ ] Phase 14 — Testing + Security Testing
-- [ ] Phase 15 — Portfolio Documentation
+- [x] Phase 0 - Product + Architecture
+- [x] Phase 1 - Project Setup
+- [x] Phase 2 - Authentication + Organizations
+- [x] Phase 3 - Document Management
+- [x] Phase 4 - Document Processing + Embeddings
+- [x] Phase 5 - Vector Search + RAG
+- [x] Phase 6 - Chat + Citations
+- [x] Phase 7 - Hybrid Search
+- [x] Phase 8 - AI Evaluation
+- [x] Phase 9 - Security Hardening
+- [x] Phase 10 - Observability
+- [x] Phase 11 - Agents
+- [x] Phase 12 - Docker
+- [x] Phase 13 - CI/CD
+- [x] Phase 14 - Testing + Security Testing
+- [ ] Phase 15 - Portfolio Documentation (In Progress)
 
-## 11. How to Run Locally
+## 8. How to Run Locally (Docker Recommended)
 
-### Environment Setup
+### Option A: Docker Compose (Easiest)
 1. Clone the repository.
-2. Copy the environment template: cp .env.example .env
-3. Fill in your .env file using the exact keys expected by the application (SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, DATABASE_URL). *Do not commit this file.*
+2. Copy the environment template: `cp .env.example .env`
+3. Fill in your `.env` file using the exact keys expected. You MUST provide Supabase keys.
+4. Run the cluster:
+   ```bash
+   docker compose up --build
+   ```
+   This spins up the Next.js frontend (port 3000), FastAPI backend (port 8000), and automatically initializes Ollama, pulling required models on startup.
 
-### Backend
-``bash
+### Option B: Local Development Native
+**Backend**
+```bash
 cd backend
 python -m venv venv311
 source venv311/bin/activate  # Or .\venv311\Scripts\activate on Windows
 pip install -r requirements.txt
 alembic upgrade head
 uvicorn app.main:app --reload
-``
+```
 
-### Frontend
-``bash
+**Frontend**
+```bash
 cd frontend
 npm install
 npm run dev
-``
+```
 
-## 12. Testing
-To run the backend test suite:
-``bash
-cd backend
-python -m pytest tests/
-``
+## 9. Testing & CI/CD
+The project features a comprehensive Continuous Integration pipeline (`ci.yml`) ensuring high security and stability:
+- **Backend Testing**: 90+ `pytest` security integration tests running against ephemeral `pgvector` instances.
+- **Frontend Validation**: ESLint and Next.js standalone production build checks.
+- **Docker Validation**: Build checks for deployment images.
+To run backend tests locally: `cd backend && pytest tests/ -v`

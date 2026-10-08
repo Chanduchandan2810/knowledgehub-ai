@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const cookieStore = await cookies()
   const role = cookieStore.get('khub_role')?.value
-  const activeOrgId = cookieStore.get('khub_org_id')?.value
+  // const activeOrgId = cookieStore.get('khub_org_id')?.value
 
   // Wrong role → redirect to correct portal
   if (role === 'EMPLOYEE') {
