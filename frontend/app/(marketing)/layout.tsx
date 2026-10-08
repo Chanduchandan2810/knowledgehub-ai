@@ -10,7 +10,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8">
           <div>
             <h4 className="text-white font-semibold mb-4 text-lg">KnowledgeHub AI</h4>
-            <p className="mb-4">Your company's knowledge, intelligently connected.</p>
+            <p className="mb-4">Your company&apos;s knowledge, intelligently connected.</p>
           </div>
           <div>
             <h4 className="text-white font-semibold mb-4">Product</h4>

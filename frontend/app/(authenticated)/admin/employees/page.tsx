@@ -28,7 +28,7 @@ export default function AdminEmployees() {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid);
   }
 
-  const getActiveOrganizationId = async (session: any) => {
+  const getActiveOrganizationId = async (session: { access_token: string }) => {
     const match = document.cookie.match(/(^|;)\s*khub_org_id\s*=\s*([^;]+)/);
     let orgId = match ? (match.pop() as string) : '';
     
@@ -57,17 +57,6 @@ export default function AdminEmployees() {
     
     throw new Error("No organization is associated with this account.");
   }
-
-  useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user?.email) {
-        setCurrentUserEmail(session.user.email)
-      }
-      fetchEmployees()
-    }
-    init()
-  }, [])
 
   const fetchEmployees = async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -99,6 +88,18 @@ export default function AdminEmployees() {
     }
   }
 
+  useEffect(() => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user?.email) {
+        setCurrentUserEmail(session.user.email)
+      }
+      fetchEmployees()
+    }
+    init()
+  }, [])
+
+
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault()
     setisAdding(true)
@@ -117,7 +118,7 @@ export default function AdminEmployees() {
         body: JSON.stringify({ email: employeeEmail, full_name: employeeName })
       })
       
-      let data: any = {};
+      let data: Record<string, unknown> = {};
         try {
           const contentType = res.headers.get('content-type');
           if (contentType && contentType.indexOf('application/json') !== -1) {
@@ -138,11 +139,13 @@ export default function AdminEmployees() {
       } else {
         let errorMsg = 'Failed to add employee';
           if (typeof data.detail === 'string') { errorMsg = data.detail; }
-          else if (Array.isArray(data.detail)) { errorMsg = data.detail.map((err: any) => err.msg).join(', '); }
+          else if (Array.isArray(data.detail)) { errorMsg = data.detail.map((err: { msg: string }) => err.msg).join(', '); }
           setaddResult({ success: false, message: errorMsg })
       }
-    } catch (err: any) {
-      setaddResult({ success: false, message: err.message })
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setaddResult({ success: false, message: errorMessage })
+      // replaced
     } finally {
       setisAdding(false)
     }

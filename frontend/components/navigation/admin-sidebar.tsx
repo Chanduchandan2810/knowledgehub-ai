@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, FileText, Users, Shield, BarChart3, Activity, Settings, BrainCircuit } from 'lucide-react'
 import { cn } from '../ui/button'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 
 const workspaceNav = [
@@ -23,6 +23,38 @@ const insightsNav = [
 const configNav = [
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
+
+type NavItem = { name: string, href: string, icon: React.ElementType }
+
+function NavGroup({ items, label }: { items: NavItem[], label: string }) {
+  const pathname = usePathname()
+  return (
+    <div className="mb-6">
+      <h3 className="px-4 text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</h3>
+      <nav className="space-y-0.5 px-2">
+        {items.map((item) => {
+          const isActive = pathname === item.href
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 group",
+                isActive ? "bg-primary-50 text-primary-700" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
+              )}
+            >
+              <item.icon className={cn(
+                "mr-3 h-4 w-4 transition-colors",
+                isActive ? "text-primary-600" : "text-slate-400 group-hover:text-slate-600"
+              )} />
+              {item.name}
+            </Link>
+          )
+        })}
+      </nav>
+    </div>
+  )
+}
 
 export function AdminSidebar() {
   const pathname = usePathname()
@@ -88,35 +120,9 @@ export function AdminSidebar() {
 
   // Close sidebar on navigation on mobile
   useEffect(() => {
-    setIsMobileOpen(false)
+    const t = setTimeout(() => setIsMobileOpen(false), 0)
+    return () => clearTimeout(t)
   }, [pathname])
-
-  const NavGroup = ({ items, label }: { items: any[], label: string }) => (
-    <div className="mb-6">
-      <h3 className="px-4 text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">{label}</h3>
-      <nav className="space-y-0.5 px-2">
-        {items.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 group",
-                isActive ? "bg-primary-50 text-primary-700" : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
-              )}
-            >
-              <item.icon className={cn(
-                "mr-3 h-4 w-4 transition-colors",
-                isActive ? "text-primary-600" : "text-slate-400 group-hover:text-slate-600"
-              )} />
-              {item.name}
-            </Link>
-          )
-        })}
-      </nav>
-    </div>
-  )
 
   return (
     <>

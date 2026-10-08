@@ -9,8 +9,8 @@ import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 
 export default function EmployeeProfile() {
-  const [user, setUser] = useState<any>(null)
-  const [userContext, setUserContext] = useState<any>(null)
+  const [user, setUser] = useState<Record<string, string> | null>(null)
+  const [userContext, setUserContext] = useState<Record<string, string> | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function EmployeeProfile() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      setUser(session.user)
+      setUser(session.user as unknown as Record<string, string>)
 
       // Fetch user context from backend
       try {
@@ -42,7 +42,8 @@ export default function EmployeeProfile() {
     loadProfile()
   }, [supabase])
 
-  const fullName = userContext?.full_name || user?.user_metadata?.full_name || 'Employee'
+  interface UserProfile { full_name?: string; user_metadata?: { full_name?: string; }; email?: string; }
+  const fullName = (userContext as unknown as UserProfile)?.full_name || (user as unknown as UserProfile)?.user_metadata?.full_name || 'Employee'
   const initials = fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
 
   return (
@@ -79,7 +80,7 @@ export default function EmployeeProfile() {
                 
                 <div className="px-8 py-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
                   <div className="w-32 text-sm font-medium text-slate-500 flex items-center gap-2"><Mail className="w-4 h-4" /> Account Email</div>
-                  <div className="text-base font-semibold text-slate-900 flex-1">{user?.email}</div>
+                  <div className="text-base font-semibold text-slate-900 flex-1">{user?.email as string}</div>
                 </div>
                 
                 <div className="px-8 py-6 flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-8">

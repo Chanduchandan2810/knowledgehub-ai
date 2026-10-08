@@ -57,8 +57,9 @@ export function RetrievalChat({ role }: { role: 'Admin' | 'Employee' }) {
 
       const data: RetrievalResponse = await res.json()
       setRetrievedData(data)
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during retrieval.')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during retrieval.'
+      setError(errorMessage)
     } finally {
       setIsSearching(false)
     }
@@ -111,7 +112,7 @@ export function RetrievalChat({ role }: { role: 'Admin' | 'Employee' }) {
           <div className="max-w-4xl mx-auto w-full space-y-6 pb-24">
             <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
               <h2 className="text-xl font-semibold text-slate-900">Retrieval Results</h2>
-              <span className="text-sm text-slate-500">Query: "{query}"</span>
+              <span className="text-sm text-slate-500">Query: &quot;{query}&quot;</span>
             </div>
 
             {isSearching && (

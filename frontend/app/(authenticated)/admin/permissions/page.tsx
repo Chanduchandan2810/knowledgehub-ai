@@ -58,7 +58,7 @@ export default function AdminPermissions() {
                     <CheckCircle2 className="w-5 h-5 text-slate-400" />
                   </div>
                   <h3 className="text-sm font-semibold text-slate-900 mb-1">Global Organization Access</h3>
-                  <p className="text-xs text-slate-500 max-w-sm mb-4">Currently, all processed documents inherit the "Organization-Wide" visibility policy.</p>
+                  <p className="text-xs text-slate-500 max-w-sm mb-4">Currently, all processed documents inherit the &quot;Organization-Wide&quot; visibility policy.</p>
                 </CardContent>
               </Card>
             </div>

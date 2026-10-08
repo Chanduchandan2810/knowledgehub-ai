@@ -164,7 +164,7 @@ export default function LoginPage() {
           </form>
 
           <div className="text-center text-sm text-slate-500 mt-8 pt-6 border-t border-slate-100">
-            Don't have a workspace yet? <Link href="/register" className="font-semibold text-primary-600 hover:text-primary-700">Create workspace</Link>
+            Don&apos;t have a workspace yet? <Link href="/register" className="font-semibold text-primary-600 hover:text-primary-700">Create workspace</Link>
           </div>
 
         </div>

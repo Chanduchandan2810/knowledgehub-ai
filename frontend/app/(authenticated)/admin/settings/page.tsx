@@ -11,7 +11,7 @@ import Link from 'next/link'
 
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState('org')
-  const [org, setOrg] = useState<any>(null)
+  const [org, setOrg] = useState<Record<string, string> | null>(null)
   const [currentUserEmail, setCurrentUserEmail] = useState('')
   const supabase = createClient()
 
@@ -86,15 +86,15 @@ export default function AdminSettings() {
                 <CardContent className="p-6 space-y-6">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">Organization Name</label>
-                    <Input value={org?.name || ''} readOnly className="max-w-md bg-slate-50" />
+                    <Input value={(org?.name as string) || ''} readOnly className="max-w-md bg-slate-50" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">Organization ID (UUID)</label>
-                    <Input value={org?.id || ''} readOnly className="max-w-md bg-slate-50 font-mono text-xs" />
+                    <Input value={(org?.id as string) || ''} readOnly className="max-w-md bg-slate-50 font-mono text-xs" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">Created At</label>
-                    <Input value={org?.created_at ? new Date(org.created_at).toLocaleDateString() : ''} readOnly className="max-w-md bg-slate-50" />
+                    <Input value={org?.created_at ? new Date(org.created_at as string).toLocaleDateString() : ''} readOnly className="max-w-md bg-slate-50" />
                   </div>
                   <div className="pt-4 border-t border-slate-100">
                     <Button disabled>Save Changes</Button>

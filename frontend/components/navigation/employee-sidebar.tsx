@@ -71,7 +71,8 @@ export function EmployeeSidebar() {
 
   // Close sidebar on navigation on mobile
   useEffect(() => {
-    setIsMobileOpen(false)
+    const t = setTimeout(() => setIsMobileOpen(false), 0)
+    return () => clearTimeout(t)
   }, [pathname])
 
   return (

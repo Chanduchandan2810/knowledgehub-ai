@@ -35,7 +35,7 @@ export default function LandingPage() {
             Enterprise AI Knowledge Platform
           </motion.div>
           <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-8 leading-[1.1]">
-            Your organization's knowledge, <br className="hidden md:block"/>
+            Your organization&apos;s knowledge, <br className="hidden md:block"/>
             <span className="text-gradient">intelligently connected.</span>
           </motion.h1>
           <motion.p variants={fadeUp} className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">

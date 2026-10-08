@@ -65,6 +65,15 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
     }
   }
 
+  const scrollRafRef = useRef<number | null>(null)
+
+  const scrollToBottom = () => {
+    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current)
+    scrollRafRef.current = requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    })
+  }
+
   const fetchMessages = async (id: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -86,29 +95,24 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
   }
 
   useEffect(() => {
-    fetchConversations()
+    const t = setTimeout(() => fetchConversations(), 0)
+    return () => clearTimeout(t)
   }, [])
 
   useEffect(() => {
-    if (conversationId) {
-      fetchMessages(conversationId)
-    } else {
-      setMessages([])
-    }
+    const t = setTimeout(() => {
+      if (conversationId) {
+        fetchMessages(conversationId)
+      } else {
+        setMessages([])
+      }
+    }, 0)
+    return () => clearTimeout(t)
   }, [conversationId])
-
-  const scrollRafRef = useRef<number | null>(null)
 
   useEffect(() => {
     scrollToBottom()
   }, [messages])
-
-  const scrollToBottom = () => {
-    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current)
-    scrollRafRef.current = requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    })
-  }
 
   const handleCreateNew = async () => {
     try {
@@ -248,8 +252,9 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
         }
       }
 
-    } catch (err: any) {
-      setError(err.message || 'An error occurred.')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred.'
+      setError(errorMessage)
       setMessages(prev => prev.filter(m => !m.id.startsWith('temp-')))
     } finally {
       setIsSearching(false)
@@ -342,7 +347,7 @@ export function ChatInterface({ role }: { role: 'Admin' | 'Employee' }) {
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">How can I help you today?</h1>
                 <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-                  I can answer questions based on your organization's authorized documents.
+                  I can answer questions based on your organization&apos;s authorized documents.
                 </p>
               </motion.div>
             </div>

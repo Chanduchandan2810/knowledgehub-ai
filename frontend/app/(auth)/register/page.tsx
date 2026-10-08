@@ -98,8 +98,9 @@ export default function RegisterPage() {
       document.cookie = `khub_org_id=${org.id}; path=/; max-age=86400; SameSite=Lax`
       document.cookie = `khub_role=ADMIN; path=/; max-age=86400; SameSite=Lax`
       router.push('/admin/documents')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred.'
+      setError(errorMessage)
       setLoading(false)
     }
   }

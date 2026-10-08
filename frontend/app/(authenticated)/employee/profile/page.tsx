@@ -62,8 +62,9 @@ export default function EmployeeProfile() {
           role: userData.role || 'EMPLOYEE',
           organization_name: orgName
         })
-      } catch (err: any) {
-        setError(err.message || "An unexpected error occurred.")
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setError(errorMessage || "An unexpected error occurred.")
       } finally {
         setLoading(false)
       }
