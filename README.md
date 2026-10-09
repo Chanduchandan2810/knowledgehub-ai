@@ -1,120 +1,247 @@
 # KnowledgeHub AI
 
-KnowledgeHub AI is a B2B multi-tenant AI knowledge platform.
+**A multi-tenant enterprise knowledge platform with permission-aware Retrieval-Augmented Generation (RAG).**
 
-## 1. What is KnowledgeHub AI?
-KnowledgeHub AI enables organizations to securely upload internal knowledge documents and allows employees to ask natural-language questions against authorized company knowledge using permission-aware Retrieval-Augmented Generation (RAG) with grounded answers and source citations.
+KnowledgeHub AI helps organizations manage private documents and lets employees ask natural-language questions about company knowledge they are authorized to access.
 
-## 2. The Real-World Problem It Solves
-Modern organizations struggle with knowledge silos and information retrieval. Employees spend hours searching through handbooks, policies, and internal wikis. Public AI tools cannot be securely used with confidential data, and existing enterprise solutions often lack strict, document-level access controls. KnowledgeHub AI provides a secure, private, permission-aware AI assistant that answers questions based on data the specific employee is authorized to see.
+## Live Demo
 
-## 3. Features
-- **Multi-tenant Organization Isolation:** Backend-enforced organization/tenant isolation through authenticated user context, authorization dependencies, and permission-aware queries.
-- **Role-Based Access Control (RBAC):** Distinct portals and capabilities for Admin and Employee roles.
-- **Document Management:** Upload and manage company files directly through the web interface.
-- **Document Processing Pipeline:** Automated chunking and embedding generation using local sentence-transformer models.
-- **pgvector Integration:** Highly efficient vector search and storage natively in PostgreSQL.
-- **Hybrid Retrieval:** Fuses vector semantic search with exact keyword match searching (BM25-style) for optimal accuracy.
-- **Retrieval-Augmented Generation (RAG):** Context-aware LLM answers powered by local open-source models (Ollama).
-- **Citations:** Every AI claim is grounded and cited to the exact document chunks it used.
-- **Document Permissions:** Granular control over whether a document is accessible to all employees, specific roles, or restricted entirely.
-- **Prompt Injection Protection:** Dedicated validation models to sanitize and reject adversarial attacks.
-- **Rate Limiting:** Protects expensive AI endpoints from abuse.
-- **Observability:** Custom health checks and structured logging for debugging AI pipelines.
-- **Demo Sandbox:** A deterministic test environment built-in for rapid testing and demonstrations.
+- **Web application:** https://knowledgehub-ai-rose.vercel.app
+- **Backend API:** https://knowledgehub-ai.duckdns.org
+- **API documentation:** https://knowledgehub-ai.duckdns.org/docs
+- **GitHub repository:** https://github.com/Chanduchandan2810/knowledgehub-ai
 
-## 4. Current Roles
-- **ADMIN**: Manages the organization, manages employees, uploads/manages company documents, assigns document access permissions, and accesses organization-level administrative features.
-- **EMPLOYEE**: Belongs to an organization, accesses authorized company knowledge via the employee chat interface, and manages their own profile/settings.
+> The application uses a local language model for generation. Demo availability and response times depend on the deployed services.
 
-## 5. Technology Stack & Deployment Architecture
-**Frontend**: Next.js App Router, React, TypeScript, Tailwind CSS, Lucide Icons.
-**Backend**: Python, FastAPI, SQLAlchemy (async), asyncpg, Alembic.
-**Database & Platform**: Supabase (PostgreSQL with pgvector, Supabase Auth).
-**AI & Search**: sentence-transformers (local embeddings), Ollama (local generation).
-**Infrastructure**: Fully dockerized modular monolith (Next.js container, FastAPI container, Ollama container).
+## The Problem
 
-## 6. Repository Structure
-```text
-backend/
-├── alembic/              # Database migration scripts
-├── app/                  # FastAPI application code
-│   ├── api/v1/           # API Routers (auth, employees, organizations, documents, chat)
-│   ├── core/             # Security and configuration
-│   ├── db/               # Database session management
-│   ├── models/           # SQLAlchemy models
-│   ├── schemas/          # Pydantic validation schemas
-│   ├── services/         # Business logic (RAG, documents, embeddings, hybrid search)
-│   └── main.py           # Application entrypoint
-├── tests/                # 90+ Pytest security/integration tests
-├── Dockerfile            # Container configuration
-└── requirements.txt      # Python dependencies
+Organizations store important knowledge across policies, employee handbooks, and internal documents. Finding the right information can be time-consuming, while sending confidential company documents to public AI services can create privacy risks.
 
-frontend/
-├── app/
-│   ├── (auth)/           # /login, /register
-│   ├── (authenticated)/  # /admin and /employee layouts and portals
-│   ├── (demo)/           # /demo sandbox
-│   └── (marketing)/      # Public landing page (/)
-├── components/           # Shared UI components and navigation
-├── middleware.ts         # Next.js API proxy and middleware
-├── Dockerfile            # Next.js standalone container build
-└── package.json          # Node dependencies
+KnowledgeHub AI addresses this problem with a private, organization-scoped knowledge platform that retrieves authorized document content and uses it to generate context-aware answers with source citations.
+
+## Features
+
+- **Multi-tenant architecture:** Organization-scoped data access enforced by backend authorization and database queries.
+- **Role-based access control:** Separate Admin and Employee experiences.
+- **Document management:** Upload and manage organizational documents through the web interface.
+- **Document ingestion:** Extract text, create chunks, and generate embeddings using a local sentence-transformer model.
+- **Semantic search:** Store and retrieve document embeddings using PostgreSQL with pgvector.
+- **Hybrid retrieval:** Combine vector similarity search with PostgreSQL full-text search using weighted retrieval fusion.
+- **RAG-powered chat:** Generate answers using retrieved document context and a locally hosted language model.
+- **Source citations:** Validate citation references against retrieved source material and display available supporting documents.
+- **Document permissions:** Restrict document access according to the configured organization and permission rules.
+- **Security controls:** Authentication, authorization checks, cross-tenant access protections, input validation, and prompt-injection-aware context construction.
+- **Rate limiting:** Apply request limits to help protect application endpoints.
+- **Observability:** Request logging, health checks, and RAG pipeline timing information.
+- **Controlled AI tools:** Support selected document comparison and summarization workflows through a controlled Knowledge Analyst router.
+- **Demo sandbox:** Provide a separate demo experience using the application's real processing and retrieval pipeline.
+
+## User Roles
+
+### Admin
+- Manage organization-level resources.
+- Upload and manage company documents.
+- Manage employee accounts.
+- Configure document access permissions.
+- Use administrative features for the organization.
+
+### Employee
+- Access the employee portal.
+- Ask questions about authorized company knowledge.
+- View available source citations.
+- Access personal profile and settings features supported by the application.
+
+## Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| Frontend | Next.js App Router, React, TypeScript, Tailwind CSS, Lucide React |
+| Backend | Python, FastAPI, SQLAlchemy Async, asyncpg |
+| Database | Supabase PostgreSQL, pgvector |
+| Authentication | Supabase Auth |
+| Database migrations | Alembic |
+| Embeddings | `sentence-transformers/all-MiniLM-L6-v2` |
+| LLM inference | Ollama, `llama3.2:1b-instruct-q4_K_M` |
+| Document storage | Supabase Storage |
+| Containers | Docker, Docker Compose |
+| Deployment | Vercel, Google Cloud VM, Nginx, HTTPS |
+| CI/CD | GitHub Actions |
+| Testing | Pytest, frontend linting, production-build checks, Docker build validation |
+
+## System Architecture
+
+KnowledgeHub AI uses a modular monolith architecture: a Next.js frontend communicates with a FastAPI backend, which coordinates authentication, document processing, retrieval, and AI generation.
+
+### RAG Pipeline
+
+```mermaid
+flowchart TD
+    A[Employee question] --> B[Authentication and authorization]
+    B --> C[Permission-aware retrieval]
+    C --> D[Vector search using pgvector]
+    C --> E[PostgreSQL full-text search]
+    D --> F[Hybrid result fusion]
+    E --> F
+    F --> G[Context construction]
+    G --> H[Local LLM through Ollama]
+    H --> I[Citation validation]
+    I --> J[Answer and available sources]
 ```
 
-## 7. Development Roadmap & Status
-**Current State: Phase 14 Completed. The project core is fully implemented.**
+### Document Ingestion
 
-- [x] Phase 0 - Product + Architecture
-- [x] Phase 1 - Project Setup
-- [x] Phase 2 - Authentication + Organizations
-- [x] Phase 3 - Document Management
-- [x] Phase 4 - Document Processing + Embeddings
-- [x] Phase 5 - Vector Search + RAG
-- [x] Phase 6 - Chat + Citations
-- [x] Phase 7 - Hybrid Search
-- [x] Phase 8 - AI Evaluation
-- [x] Phase 9 - Security Hardening
-- [x] Phase 10 - Observability
-- [x] Phase 11 - Agents
-- [x] Phase 12 - Docker
-- [x] Phase 13 - CI/CD
-- [x] Phase 14 - Testing + Security Testing
-- [ ] Phase 15 - Portfolio Documentation (In Progress)
+1. An authorized user uploads a document.
+2. The backend validates the request and stores the original file in private object storage.
+3. The processing pipeline extracts text and splits it into chunks.
+4. A local sentence-transformer model generates embeddings.
+5. Document metadata, chunks, permissions, and embeddings are stored in PostgreSQL.
+6. Future questions retrieve relevant content subject to the application's authorization rules.
 
-## 8. How to Run Locally (Docker Recommended)
+### Production Deployment
 
-### Option A: Docker Compose (Easiest)
-1. Clone the repository.
-2. Copy the environment template: `cp .env.example .env`
-3. Fill in your `.env` file using the exact keys expected. You MUST provide Supabase keys.
-4. Run the cluster:
+```mermaid
+flowchart TD
+    A[User's browser] --> B[Vercel: Next.js frontend]
+    B -->|HTTPS API requests| C[Nginx reverse proxy]
+    C --> D[Google Cloud VM: FastAPI container]
+    D --> E[Supabase Auth and PostgreSQL]
+    D --> F[Supabase Storage]
+    D --> G[Ollama container]
+```
+
+The production frontend is deployed on Vercel. The backend and local LLM inference service run on the Google Cloud VM, with Nginx terminating HTTPS and forwarding API requests to FastAPI.
+
+## Security and Tenant Isolation
+
+Security is an important part of the application design.
+
+- Authentication is handled through Supabase Auth.
+- Backend authorization determines the user's organization and role.
+- Organization-scoped queries restrict access to tenant-specific resources.
+- Document retrieval applies the configured access permissions before content is used to construct an answer.
+- Cross-tenant and cross-user access scenarios are covered by security regression tests.
+- Request validation, rate limiting, and prompt-injection-aware context construction provide additional protections.
+
+**Note:** Tenant isolation is enforced through application-level authorization and scoped queries. This README does not claim that PostgreSQL Row-Level Security (RLS) is the primary enforcement mechanism.
+
+## Controlled AI Workflows
+
+The Knowledge Analyst supports selected workflows, including:
+
+- Standard knowledge questions using RAG.
+- Comparison of explicitly named documents.
+- Summarization of explicitly named documents.
+
+The workflows use the application's retrieval and authorization controls rather than granting unrestricted access to organizational data.
+
+## Repository Structure
+
+```text
+knowledgehub-ai/
+├── backend/
+│   ├── alembic/          # Database migrations
+│   ├── app/
+│   │   ├── api/          # API endpoints
+│   │   ├── core/         # Configuration and security
+│   │   ├── db/           # Database session management
+│   │   ├── models/       # Database models
+│   │   ├── schemas/      # Request and response schemas
+│   │   └── services/     # Business logic and RAG pipeline
+│   ├── tests/            # Backend and security tests
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/
+│   ├── app/              # Pages, layouts, and portals
+│   ├── components/       # Shared UI components
+│   ├── Dockerfile
+│   └── package.json
+├── docker-compose.yml
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── .env.example
+└── README.md
+```
+
+This is a representative structure; consult the repository for the complete file tree.
+
+## Running Locally
+
+### Prerequisites
+
+- Git
+- Docker Engine and Docker Compose, or the required Python and Node.js runtimes for native development
+- A Supabase project with the required database, authentication, and storage configuration
+- The environment variables documented in `.env.example`
+
+### Docker Compose
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/Chanduchandan2810/knowledgehub-ai.git
+   cd knowledgehub-ai
+   ```
+
+2. Create the local environment file:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   On Windows PowerShell:
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+3. Fill in the required values using `.env.example` as the source of truth. Do not commit `.env` or publish credentials.
+
+4. Start the application:
+
    ```bash
    docker compose up --build
    ```
-   This spins up the Next.js frontend (port 3000), FastAPI backend (port 8000), and automatically initializes Ollama, pulling required models on startup.
 
-### Option B: Local Development Native
-**Backend**
+5. Run database migrations to initialize the schema:
+
+   ```bash
+   docker compose exec backend alembic upgrade head
+   ```
+
+6. Open the frontend at `http://localhost:3000` and the backend API documentation at `http://localhost:8000/docs`, assuming the default ports are available and the services start successfully.
+
+Follow the current Compose configuration for Ollama model initialization and any additional setup steps. The local environment requires valid configuration and access to the required services.
+
+## Testing and CI/CD
+
+The project includes automated backend tests and GitHub Actions validation.
+
+- **Backend tests:** Pytest coverage for API behavior, authorization, tenant isolation, and security regression scenarios.
+- **Frontend validation:** ESLint and Next.js production-build checks.
+- **Docker validation:** Container image build checks.
+- **Continuous integration:** GitHub Actions runs the backend, frontend, and Docker validation jobs.
+
+The latest recorded local backend test run completed with **94 passed and 0 skipped**. The three CI jobs were also verified as passing at the time of the recorded run. These results describe those runs and may change as the code evolves.
+
+Run backend tests locally:
+
 ```bash
 cd backend
-python -m venv venv311
-source venv311/bin/activate  # Or .\venv311\Scripts\activate on Windows
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload
+pytest tests/ -v
 ```
 
-**Frontend**
-```bash
-cd frontend
-npm install
-npm run dev
-```
+Run frontend checks from the frontend directory using the scripts defined in `frontend/package.json`.
 
-## 9. Testing & CI/CD
-The project features a comprehensive Continuous Integration pipeline (`ci.yml`) ensuring high security and stability:
-- **Backend Testing**: 90+ `pytest` security integration tests running against ephemeral `pgvector` instances.
-- **Frontend Validation**: ESLint and Next.js standalone production build checks.
-- **Docker Validation**: Build checks for deployment images.
-To run backend tests locally: `cd backend && pytest tests/ -v`
+## Project Status
+
+The core application, RAG pipeline, hybrid retrieval, controlled AI workflows, deployment setup, CI/CD, and security regression tests have been implemented.
+
+The current focus is portfolio documentation and presenting the deployed project clearly.
+
+## Author
+
+**Chandan R**
+B.E. Information Science and Engineering
+
+GitHub: https://github.com/Chanduchandan2810
